@@ -11,26 +11,36 @@ supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 embedding_model = "models/text-embedding-004"
 generative_model = genai.GenerativeModel("gemini-2.0-flash")
 
+import asyncio
+
+# ... imports ...
+
 async def search_knowledge_base(query: str, subject: str, limit: int = 3) -> str:
-    """Retrieves relevant chunks from Vector DB."""
-    # 1. Generate Query Embedding
-    query_emb = genai.embed_content(
-        model=embedding_model,
-        content=query,
-        task_type="retrieval_query"
-    )['embedding']
+    """Retrieves relevant chunks from Vector DB (Non-blocking)."""
     
-    # 2. Search Supabase (RPC call usually, but using direct match here if simple)
-    # Note: Requires a postgres function 'match_documents' to be set up in Supabase
-    response = supabase.rpc(
-        "match_documents",
-        {
-            "query_embedding": query_emb,
-            "match_threshold": 0.5,
-            "match_count": limit,
-            "filter": {"subject": subject}
-        }
-    ).execute()
+    # 1. Generate Query Embedding (Threadpool)
+    def _embed():
+         return genai.embed_content(
+            model=embedding_model,
+            content=query,
+            task_type="retrieval_query"
+        )['embedding']
+    
+    query_emb = await asyncio.to_thread(_embed)
+    
+    # 2. Search Supabase (Threadpool)
+    def _search():
+        return supabase.rpc(
+            "match_documents",
+            {
+                "query_embedding": query_emb,
+                "match_threshold": 0.5,
+                "match_count": limit,
+                "filter": {"subject": subject}
+            }
+        ).execute()
+
+    response = await asyncio.to_thread(_search)
     
     # 3. Format Context
     context = ""
@@ -61,7 +71,10 @@ class TopicAgent:
             Output JSON only: {{ "topic_path": "Chapter > Subtopic", "confidence": 0.95 }}
             """
             
-            response = generative_model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
+            # Non-blocking generation
+            response = await asyncio.to_thread(
+                lambda: generative_model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
+            )
             try:
                 data = json.loads(response.text)
                 results.append({
@@ -102,7 +115,10 @@ class GradingAgent:
         }}
         """
         
-        response = generative_model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
+        # Non-blocking generation
+        response = await asyncio.to_thread(
+            lambda: generative_model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
+        )
         try:
             return json.loads(response.text)
         except Exception as e:
