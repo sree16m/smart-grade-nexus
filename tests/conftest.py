@@ -42,3 +42,18 @@ def mock_supabase(monkeypatch):
     monkeypatch.setattr("app.services.ingestion.supabase", mock_client)
     monkeypatch.setattr("app.services.agents.supabase", mock_client)
     return mock_client
+
+@pytest.fixture(autouse=True)
+def mock_fitz(monkeypatch):
+    """Mocks PyMuPDF (fitz) to avoid needing real PDF files."""
+    mock_doc = MagicMock()
+    mock_page = MagicMock()
+    mock_page.get_text.return_value = "Page text content"
+    mock_doc.__iter__.return_value = [mock_page]
+    
+    # Mock context manager
+    mock_open = MagicMock()
+    mock_open.return_value = mock_doc
+    
+    import app.services.ingestion
+    monkeypatch.setattr(app.services.ingestion, "fitz", MagicMock(open=mock_open))

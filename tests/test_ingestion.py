@@ -1,5 +1,6 @@
 import pytest
 from app.services.ingestion import IngestionService
+from unittest.mock import AsyncMock
 
 @pytest.mark.asyncio
 async def test_chunk_text():
@@ -15,7 +16,7 @@ async def test_process_document(mock_gemini, mock_supabase):
     service = IngestionService()
     
     # Mock parse_pdf since we don't have a real PDF file here
-    service.parse_pdf = pytest.mark.asyncio(lambda x: "Sample text content from PDF.")
+    service.parse_pdf = AsyncMock(return_value="Sample text content from PDF.")
     
     result = await service.process_document(
         b"dummy_pdf_bytes", 
