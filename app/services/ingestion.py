@@ -3,6 +3,7 @@ import google.generativeai as genai
 from supabase import create_client, Client
 from app.core.config import settings
 from typing import List, Dict, Any
+import asyncio
 
 # Initialize Clients
 genai.configure(api_key=settings.GOOGLE_API_KEY)
@@ -13,12 +14,15 @@ class IngestionService:
         self.embedding_model = "models/text-embedding-004"
 
     async def parse_pdf(self, file_content: bytes) -> str:
-        """Extracts text from a PDF file."""
-        doc = fitz.open(stream=file_content, filetype="pdf")
-        text = ""
-        for page in doc:
-            text += page.get_text()
-        return text
+        """Extracts text from a PDF file (runs in threadpool to avoid blocking)."""
+        def _parse():
+            doc = fitz.open(stream=file_content, filetype="pdf")
+            text = ""
+            for page in doc:
+                text += page.get_text()
+            return text
+            
+        return await asyncio.to_thread(_parse)
 
     def chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
         """Robust Recursive Chunker handling various separators."""
@@ -120,13 +124,16 @@ class IngestionService:
         return _recursive_split(text, separators)
 
     async def get_embedding(self, text: str) -> List[float]:
-        """Generates embedding using Gemini Free Tier."""
-        result = genai.embed_content(
-            model=self.embedding_model,
-            content=text,
-            task_type="retrieval_document"
-        )
-        return result['embedding']
+        """Generates embedding using Gemini Free Tier (runs in threadpool)."""
+        def _embed():
+            result = genai.embed_content(
+                model=self.embedding_model,
+                content=text,
+                task_type="retrieval_document"
+            )
+            return result['embedding']
+            
+        return await asyncio.to_thread(_embed)
 
     async def process_document(self, file_content: bytes, metadata: Dict[str, Any]):
         """Main Orchestrator: Parse -> Chunk -> Embed -> Store."""
