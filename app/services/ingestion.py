@@ -143,28 +143,39 @@ class IngestionService:
         if not raw_text.strip():
             raise ValueError("No text extracted. This PDF might be an image/scan (OCR not supported in Zero-Cost MVP).")
         
-        # 2. Chunk
-        chunks = self.chunk_text(raw_text)
+        # 2. Chunk (Run in threadpool to avoid blocking event loop)
+        chunks = await asyncio.to_thread(self.chunk_text, raw_text)
         
-        # 3. Embed & Prepare Records
-        records = []
-        for i, chunk in enumerate(chunks):
+        # 3. Embed (Parallelized with Semaphore)
+        sem = asyncio.Semaphore(10) # Limit concurrent requests to avoid rate limits
+        
+        async def _process_chunk(i: int, chunk: str):
             if not chunk.strip():
-                continue
-            embedding = await self.get_embedding(chunk)
+                return None
             
-            record = {
+            async with sem:
+                embedding = await self.get_embedding(chunk)
+                
+            return {
                 "content": chunk,
                 "metadata": metadata,
-                "embedding": embedding, # pgvector field
+                "embedding": embedding,
                 "chunk_index": i
             }
-            records.append(record)
+
+        tasks = [_process_chunk(i, chunk) for i, chunk in enumerate(chunks)]
+        results = await asyncio.gather(*tasks)
+        
+        # Filter out None results (empty chunks)
+        records = [r for r in results if r is not None]
             
         # 4. Store in Supabase
-        # Assumes a table 'documents' exists with 'embedding' column
-        response = supabase.table("documents").insert(records).execute()
-        return {"status": "success", "chunks_processed": len(chunks)}
+        if records:
+            # Assumes a table 'documents' exists with 'embedding' column
+            response = supabase.table("documents").insert(records).execute()
+            return {"status": "success", "chunks_processed": len(records)}
+        else:
+             return {"status": "success", "chunks_processed": 0}
 
     async def get_uploaded_books(self) -> List[Dict]:
         """Fetches unique books metadata via RPC."""
