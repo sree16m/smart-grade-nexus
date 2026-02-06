@@ -23,7 +23,8 @@ async def search_knowledge_base(query: str, subject: str, limit: int = 3) -> str
          return genai.embed_content(
             model=embedding_model,
             content=query,
-            task_type="retrieval_query"
+            task_type="retrieval_query",
+            output_dimensionality=768
         )['embedding']
     
     query_emb = await asyncio.to_thread(_embed)
