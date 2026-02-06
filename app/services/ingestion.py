@@ -11,7 +11,7 @@ supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 class IngestionService:
     def __init__(self):
-        self.embedding_model = "models/text-embedding-004"
+        self.embedding_model = "models/gemini-embedding-001"
 
     async def parse_pdf(self, file_content: bytes) -> str:
         """Extracts text from a PDF file (runs in threadpool to avoid blocking)."""

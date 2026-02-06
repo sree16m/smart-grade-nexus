@@ -8,7 +8,7 @@ import json
 genai.configure(api_key=settings.GOOGLE_API_KEY)
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 # Initialize RAG Model
-embedding_model = "models/text-embedding-004"
+embedding_model = "models/gemini-embedding-001"
 generative_model = genai.GenerativeModel("gemini-2.0-flash")
 
 import asyncio
