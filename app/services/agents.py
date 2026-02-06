@@ -29,18 +29,22 @@ async def search_knowledge_base(query: str, subject: str, limit: int = 3) -> str
     query_emb = await asyncio.to_thread(_embed)
     
     # 2. Search Supabase (Threadpool)
-    def _search():
+    def _search(search_subject):
         return supabase.rpc(
             "match_documents",
             {
                 "query_embedding": query_emb,
                 "match_threshold": 0.5,
                 "match_count": limit,
-                "filter": {"subject": subject}
+                "filter": {"subject": search_subject}
             }
         ).execute()
 
-    response = await asyncio.to_thread(_search)
+    response = await asyncio.to_thread(_search, subject)
+    
+    # Retry logic: Handle "Physic" vs "Physics" mismatch
+    if not response.data and subject == "Physics":
+        response = await asyncio.to_thread(_search, "Physic")
     
     # 3. Format Context
     context = ""
@@ -96,6 +100,14 @@ class GradingAgent:
         # RAG: Get the official explanation
         context = await search_knowledge_base(question, self.subject, limit=3)
         
+        # 1. Fail fast if no context is found
+        if not context.strip():
+             return {
+                 "score": 0,
+                 "feedback": f"Evaluation skipped: No reference material found for subject '{self.subject}'. Please ensure the Knowledge Base has relevant textbooks uploaded.",
+                 "citation": None
+             }
+        
         prompt = f"""
         Role: Strict Academic Grader for {self.subject}.
         Task: Grade the student's answer based ONLY on the provided Context (Ground Truth).
@@ -122,4 +134,9 @@ class GradingAgent:
         try:
             return json.loads(response.text)
         except Exception as e:
-            return {"error": str(e), "score": 0}
+            # 2. Return system error as feedback instead of silently swallowing it
+            return {
+                "score": 0, 
+                "feedback": f"System Error during grading (AI parsing failed): {str(e)}", 
+                "citation": None
+            }
