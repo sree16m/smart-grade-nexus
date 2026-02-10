@@ -41,63 +41,63 @@ class IngestionService:
 
     def chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
         """
-        Regex-based Semantic Chunker.
-        Splits by double newlines (paragraphs) and merges them to form chunks.
+        Robust Recursive Chunker.
+        Splits text by decreasing structural hierarchy: \n\n -> \n -> sentence -> char.
         """
         if not text:
             return []
 
-        # 1. Split by Paragraphs (Double Newline or more)
-        # Identify possible paragraph breaks
-        splits = re.split(r'\n\s*\n', text)
+        def _recursive_split(current_text: str, separators: List[str]) -> List[str]:
+            if len(current_text) <= chunk_size:
+                return [current_text]
+            
+            if not separators:
+                # Base case: character split
+                return [current_text[i : i + chunk_size] for i in range(0, len(current_text), chunk_size - overlap)]
+
+            sep = separators[0]
+            # Try splitting by current separator
+            if sep == ". ":
+                # Special regex for sentence split to keep delimiter
+                parts = re.split(r'(?<=\. )', current_text)
+            else:
+                parts = current_text.split(sep)
+            
+            all_parts = []
+            for part in parts:
+                if len(part) <= chunk_size:
+                    all_parts.append(part)
+                else:
+                    all_parts.extend(_recursive_split(part, separators[1:]))
+            return all_parts
+
+        # 1. Split hierarchically
+        raw_parts = _recursive_split(text, ["\n\n", "\n", ". "])
         
+        # 2. Merge parts into chunks of target size
         final_chunks = []
-        current_chunk = []
-        current_len = 0
+        current_chunk = ""
         
-        for split in splits:
-            split = split.strip()
-            if not split:
+        for part in raw_parts:
+            part = part.strip()
+            if not part:
                 continue
                 
-            split_len = len(split)
-            
-            # If a single paragraph is HUGE (bigger than chunk_size), we might need to sub-split it later.
-            # For now, let's treat it as a block.
-            
-            # Check if adding this paragraph exceeds chunk size
-            if current_len + split_len + 2 > chunk_size:
-                # Flush current chunk
-                if current_chunk:
-                    text_block = "\n\n".join(current_chunk)
-                    final_chunks.append(text_block)
-                    
-                    # Handle Overlap: Keep last few paragraphs that fit in overlap size
-                    # Simplified overlap: just keep the last paragraph if it's small
-                    overlap_buffer = []
-                    overlap_len = 0
-                    for p in reversed(current_chunk):
-                        if overlap_len + len(p) < overlap:
-                            overlap_buffer.insert(0, p)
-                            overlap_len += len(p)
-                        else:
-                            break
-                    current_chunk = overlap_buffer
-                    current_len = overlap_len
-
-                # If the new split itself is huge, force split it? 
-                # Or just accept it as one big chunk (LLMs handle 2-3k tokens easily now)
-                # Let's add it effectively.
-                current_chunk.append(split)
-                current_len += split_len
+            if len(current_chunk) + len(part) + 2 <= chunk_size:
+                current_chunk = (current_chunk + "\n\n" + part) if current_chunk else part
             else:
-                # Add to current
-                current_chunk.append(split)
-                current_len += split_len + 2 # +2 for newline
+                if current_chunk:
+                    final_chunks.append(current_chunk)
+                
+                # Handle Overlap: keep some of the previous chunk
+                if overlap > 0 and current_chunk:
+                    # Take last 'overlap' chars from previous chunk
+                    current_chunk = current_chunk[-overlap:] + "\n\n" + part
+                else:
+                    current_chunk = part
         
-        # Flush remainder
         if current_chunk:
-            final_chunks.append("\n\n".join(current_chunk))
+            final_chunks.append(current_chunk)
             
         return final_chunks
 
