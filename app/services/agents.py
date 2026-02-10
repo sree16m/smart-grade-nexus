@@ -53,10 +53,8 @@ async def search_knowledge_base(query: str, subject: str, limit: int = 3) -> str
             "match_documents",
             {
                 "query_embedding": query_emb,
-                "match_threshold": 0.5,
-                "query_embedding": query_emb,
-                "match_threshold": 0.5,
-                "match_count": 10,  # Fetch more for re-ranking
+                "match_threshold": 0.4, # Slightly lower threshold for broader concept matching
+                "match_count": 10,
                 "filter": {"subject": search_subject}
             }
         ).execute()
