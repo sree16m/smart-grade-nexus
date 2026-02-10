@@ -12,6 +12,24 @@ embedding_model = "models/gemini-embedding-001"
 generative_model = genai.GenerativeModel("gemini-2.0-flash")
 
 import asyncio
+import time
+from google.api_core.exceptions import ResourceExhausted
+
+async def generate_with_retry(model, prompt, retries=3, delay=2):
+    """Wraps generate_content with exponential backoff for 429 errors."""
+    for attempt in range(retries):
+        try:
+            return await asyncio.to_thread(
+                lambda: model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
+            )
+        except ResourceExhausted:
+            if attempt == retries - 1:
+                raise
+            sleep_time = delay * (2 ** attempt)
+            print(f"Gemini 429 Limit hit. Retrying in {sleep_time}s...")
+            await asyncio.sleep(sleep_time)
+        except Exception:
+            raise
 
 # ... imports ...
 
@@ -121,10 +139,8 @@ class TopicAgent:
             Output JSON only: {{ "topic_path": "Chapter > Subtopic", "confidence": 0.95 }}
             """
             
-            # Non-blocking generation
-            response = await asyncio.to_thread(
-                lambda: generative_model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
-            )
+            # Non-blocking generation with retry
+            response = await generate_with_retry(generative_model, prompt)
             try:
                 data = json.loads(response.text)
                 results.append({
@@ -187,10 +203,8 @@ class GradingAgent:
         }}
         """
         
-        # Non-blocking generation
-        response = await asyncio.to_thread(
-            lambda: generative_model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
-        )
+        # Non-blocking generation with retry
+        response = await generate_with_retry(generative_model, prompt)
         try:
             return json.loads(response.text)
         except Exception as e:

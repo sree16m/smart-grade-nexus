@@ -48,7 +48,8 @@ def mock_fitz(monkeypatch):
     """Mocks PyMuPDF (fitz) to avoid needing real PDF files."""
     mock_doc = MagicMock()
     mock_page = MagicMock()
-    mock_page.get_text.return_value = "Page text content"
+    # Return a long string to avoid triggering OCR fallback (> 50 chars)
+    mock_page.get_text.return_value = "This is a long mock page text content to ensure that standard tests do not trigger the OCR fallback mechanism unnecessarily."
     mock_doc.__iter__.return_value = [mock_page]
     
     # Mock context manager
@@ -57,3 +58,14 @@ def mock_fitz(monkeypatch):
     
     import app.services.ingestion
     monkeypatch.setattr(app.services.ingestion, "fitz", MagicMock(open=mock_open))
+
+@pytest.fixture(autouse=True)
+def mock_ocr(monkeypatch):
+    """Mocks Tesseract and pdf2image for all tests."""
+    mock_pytesseract = MagicMock()
+    mock_pytesseract.image_to_string.return_value = "OCR extracted text"
+    
+    import app.services.ingestion
+    monkeypatch.setattr(app.services.ingestion, "pytesseract", mock_pytesseract)
+    monkeypatch.setattr(app.services.ingestion, "convert_from_bytes", MagicMock(return_value=[]))
+

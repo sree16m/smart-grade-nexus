@@ -5,6 +5,10 @@ from app.core.config import settings
 from typing import List, Dict, Any
 import asyncio
 import re
+import pytesseract
+from pdf2image import convert_from_bytes
+import io
+from PIL import Image
 
 # Initialize Clients
 genai.configure(api_key=settings.GOOGLE_API_KEY)
@@ -15,12 +19,22 @@ class IngestionService:
         self.embedding_model = "models/gemini-embedding-001"
 
     async def parse_pdf(self, file_content: bytes) -> str:
-        """Extracts text from a PDF file (runs in threadpool to avoid blocking)."""
+        """Extracts text from a PDF file with OCR fallback."""
         def _parse():
             doc = fitz.open(stream=file_content, filetype="pdf")
             text = ""
             for page in doc:
                 text += page.get_text()
+            
+            # Fallback to OCR if extracted text is suspiciously short (e.g., scanned PDF)
+            if len(text.strip()) < 50: # Threshold for "not enough text"
+                print("Minimal text extracted via PyMuPDF. Falling back to Tesseract OCR...")
+                images = convert_from_bytes(file_content)
+                ocr_text = ""
+                for img in images:
+                    ocr_text += pytesseract.image_to_string(img)
+                return ocr_text
+                
             return text
             
         return await asyncio.to_thread(_parse)
@@ -106,7 +120,7 @@ class IngestionService:
         raw_text = await self.parse_pdf(file_content)
         
         if not raw_text.strip():
-            raise ValueError("No text extracted. This PDF might be an image/scan (OCR not supported in Zero-Cost MVP).")
+            raise ValueError("No text extracted. PDF might be empty or corrupted even after OCR attempt.")
         
         # 2. Chunk (Run in threadpool to avoid blocking event loop)
         chunks = await asyncio.to_thread(self.chunk_text, raw_text)
