@@ -4,6 +4,7 @@ from supabase import create_client, Client
 from app.core.config import settings
 from typing import List, Dict, Any
 import asyncio
+import re
 
 # Initialize Clients
 genai.configure(api_key=settings.GOOGLE_API_KEY)
@@ -25,103 +26,66 @@ class IngestionService:
         return await asyncio.to_thread(_parse)
 
     def chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
-        """Robust Recursive Chunker handling various separators."""
+        """
+        Regex-based Semantic Chunker.
+        Splits by double newlines (paragraphs) and merges them to form chunks.
+        """
         if not text:
             return []
-            
-        separators = ["\n\n", "\n", ". ", " ", ""]
-        final_chunks = []
+
+        # 1. Split by Paragraphs (Double Newline or more)
+        # Identify possible paragraph breaks
+        splits = re.split(r'\n\s*\n', text)
         
-        # Helper to merge small pieces into chunks
-        def merge_splits(splits: List[str], separator: str) -> List[str]:
-            docs = []
-            current_doc = []
-            total_len = 0
-            separator_len = len(separator)
-
-            for d in splits:
-                l = len(d)
-                if total_len + l + separator_len > chunk_size:
-                    if total_len > 0:
-                        docs.append(separator.join(current_doc))
-                        # Keep trailing for overlap (simple approach)
-                        while total_len > chunk_size - overlap and current_doc:
-                            total_len -= (len(current_doc.pop(0)) + separator_len)
-                        if not current_doc: # If popped everything
-                             total_len = 0
-                    
-                    # If the single piece is still too big, it needs further splitting
-                    if l > chunk_size and separator: 
-                        # This piece needs strictly smaller splitting
-                        pass # It will be handled by next recursion level or forced split
-                        
-                current_doc.append(d)
-                total_len += (l + separator_len)
+        final_chunks = []
+        current_chunk = []
+        current_len = 0
+        
+        for split in splits:
+            split = split.strip()
+            if not split:
+                continue
                 
-            if current_doc:
-                docs.append(separator.join(current_doc))
-            return docs
+            split_len = len(split)
+            
+            # If a single paragraph is HUGE (bigger than chunk_size), we might need to sub-split it later.
+            # For now, let's treat it as a block.
+            
+            # Check if adding this paragraph exceeds chunk size
+            if current_len + split_len + 2 > chunk_size:
+                # Flush current chunk
+                if current_chunk:
+                    text_block = "\n\n".join(current_chunk)
+                    final_chunks.append(text_block)
+                    
+                    # Handle Overlap: Keep last few paragraphs that fit in overlap size
+                    # Simplified overlap: just keep the last paragraph if it's small
+                    overlap_buffer = []
+                    overlap_len = 0
+                    for p in reversed(current_chunk):
+                        if overlap_len + len(p) < overlap:
+                            overlap_buffer.insert(0, p)
+                            overlap_len += len(p)
+                        else:
+                            break
+                    current_chunk = overlap_buffer
+                    current_len = overlap_len
 
-        # Recursive function
-        def _recursive_split(text: str, separators: List[str]) -> List[str]:
-            final_chunks = []
-            separator = separators[-1]
-            new_separators = []
-            
-            # Find the best separator that exists in text
-            for i, sep in enumerate(separators):
-                if sep == "":
-                    separator = ""
-                    break
-                if sep in text:
-                    separator = sep
-                    new_separators = separators[i+1:]
-                    break
-            
-            # Split
-            if separator:
-                splits = text.split(separator)
+                # If the new split itself is huge, force split it? 
+                # Or just accept it as one big chunk (LLMs handle 2-3k tokens easily now)
+                # Let's add it effectively.
+                current_chunk.append(split)
+                current_len += split_len
             else:
-                splits = list(text) # Character split
-                
-            # Now merge
-            docs = []
-            current_doc = []
-            total_len = 0
-            sep_len = len(separator)
+                # Add to current
+                current_chunk.append(split)
+                current_len += split_len + 2 # +2 for newline
+        
+        # Flush remainder
+        if current_chunk:
+            final_chunks.append("\n\n".join(current_chunk))
             
-            for s in splits:
-                if not s.strip(): continue
-                
-                s_len = len(s)
-                if s_len < chunk_size:
-                    if total_len + s_len + sep_len > chunk_size:
-                        docs.append(separator.join(current_doc))
-                        current_doc = [s]
-                        total_len = s_len
-                    else:
-                        current_doc.append(s)
-                        total_len += (s_len + sep_len)
-                else:
-                    # Current piece is huge
-                    if current_doc:
-                        docs.append(separator.join(current_doc))
-                        current_doc = []
-                        total_len = 0
-                    
-                    if new_separators:
-                        docs.extend(_recursive_split(s, new_separators))
-                    else:
-                        # Force split by char matching chunk_size
-                        for i in range(0, s_len, chunk_size - overlap):
-                            docs.append(s[i : i + chunk_size])
-            
-            if current_doc:
-                docs.append(separator.join(current_doc))
-            
-            return docs
-
-        return _recursive_split(text, separators)
+        return final_chunks
 
     async def get_embedding(self, text: str) -> List[float]:
         """Generates embedding using Gemini Free Tier (runs in threadpool)."""

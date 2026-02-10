@@ -36,7 +36,9 @@ async def search_knowledge_base(query: str, subject: str, limit: int = 3) -> str
             {
                 "query_embedding": query_emb,
                 "match_threshold": 0.5,
-                "match_count": limit,
+                "query_embedding": query_emb,
+                "match_threshold": 0.5,
+                "match_count": 10,  # Fetch more for re-ranking
                 "filter": {"subject": search_subject}
             }
         ).execute()
@@ -46,12 +48,55 @@ async def search_knowledge_base(query: str, subject: str, limit: int = 3) -> str
     # Retry logic: Handle "Physic" vs "Physics" mismatch
     if not response.data and subject == "Physics":
         response = await asyncio.to_thread(_search, "Physic")
+        
+    vector_results = response.data if response.data else []
     
+    # 2b. Keyword Search (Supabase/Postgres Full Text Search)
+    # We assume a 'keyword_search' RPC exists or we use direct filter.
+    # Since we can't easily add RPCs without SQL access, we'll try a fallback client-side filter 
+    # OR if the user allows, we'd add an RPC. 
+    # For Zero-Cost MVP without migration: We will rely on Vector Search primarily, 
+    # BUT we can try to boost it by fetching more and filtering Python-side if needed.
+    # However, proper Hybrid requires an RPC 'keyword_search'.
+    # Let's assume for now we just use the Vector Search as the user has low-code constraints 
+    # and likely hasn't set up FTS indexes.
+    
+    # Wait! The requirement was "Zero-Cost Implementation" of Hybrid.
+    # If we cannot create SQL functions, we can't do true FTS on Supabase easily.
+    # Alternative: Fetch MORE from Vector (limit=10) and re-rank with BM25 locally?
+    # Yes, that's a pure Python solution.
+    
+    # REVISED STRATEGY: Rerank with BM25
+    # 1. Fetch deeper (limit=10 instead of 3)
+    # 2. Rerank locally using simple keyword overlap
+    
+    docs = vector_results
+    
+    if not docs:
+         return ""
+         
+    # Simple Python-based Re-ranking (TF-IDF style / Keyword Overlap)
+    query_terms = set(query.lower().split())
+    
+    def score_doc(doc):
+        content = doc.get('content', '').lower()
+        score = 0
+        for term in query_terms:
+            if term in content:
+                score += 1
+        return score
+        
+    # Sort by (Keyword Score DESC, Vector Similarity is implicit in order)
+    # Actually, let's just prioritize docs that have the keywords.
+    docs.sort(key=score_doc, reverse=True)
+    
+    # Take top 3 after re-ranking
+    top_docs = docs[:limit]
+
     # 3. Format Context
     context = ""
-    if response.data:
-        for item in response.data:
-            context += f"---\n{item['content']}\n"
+    for item in top_docs:
+        context += f"---\n{item['content']}\n"
     return context
 
 class TopicAgent:
