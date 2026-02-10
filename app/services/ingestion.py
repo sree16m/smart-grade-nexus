@@ -6,7 +6,6 @@ from typing import List, Dict, Any
 import asyncio
 import re
 import pytesseract
-from pdf2image import convert_from_bytes
 import io
 from PIL import Image
 
@@ -19,7 +18,7 @@ class IngestionService:
         self.embedding_model = "models/gemini-embedding-001"
 
     async def parse_pdf(self, file_content: bytes) -> str:
-        """Extracts text from a PDF file with OCR fallback."""
+        """Extracts text from a PDF file with memory-efficient OCR fallback."""
         def _parse():
             doc = fitz.open(stream=file_content, filetype="pdf")
             text = ""
@@ -33,22 +32,32 @@ class IngestionService:
             is_too_short = len(text_stripped) < 50
             
             # 2. Check for "Garbage" or Non-English density
-            # If the PDF is bilingual (Telugu/English) but custom fonts break the English extraction,
-            # we check if English character count is suspiciously low compared to total text.
             english_chars = len(re.findall(r'[a-zA-Z]', text_stripped))
             density = english_chars / len(text_stripped) if len(text_stripped) > 0 else 0
             is_low_density = len(text_stripped) > 0 and density < 0.3 # Less than 30% English
             
             if is_too_short or is_low_density:
                 reason = "too short" if is_too_short else f"low English density ({density:.1%})"
-                print(f"Extraction results were poor ({reason}). Falling back to Tesseract OCR...")
+                print(f"Extraction results were poor ({reason}). Falling back to page-by-page Tesseract OCR...")
                 
-                images = convert_from_bytes(file_content)
                 ocr_text = ""
-                for img in images:
+                # Use page-by-page processing to stay under 512MB limit
+                for i in range(len(doc)):
+                    page = doc.load_page(i)
+                    # Higher DPI can improve OCR but uses more memory. 150-200 is usually plenty.
+                    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2)) 
+                    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                    
                     ocr_text += pytesseract.image_to_string(img)
+                    
+                    # Force Memory Cleanup for this page
+                    del pix
+                    del img
+                    
+                doc.close()
                 return ocr_text
                 
+            doc.close()
             return text
             
         return await asyncio.to_thread(_parse)
