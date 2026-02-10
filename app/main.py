@@ -186,6 +186,19 @@ async def evaluate_answer(request_list: List[AnswerSheet]):
             )
             
             # Append ID info to result
+            # Flatten response slightly for easier consumption, or keep it nested.
+            # Let's keep the new structure but ensure 'score' is top-level for backwards compat if needed by frontend
+            # Actually, let's just expose the new structure directly but maybe add 'score' at top level for safety?
+            # User wants "correct answer, details of subject..." so returning the whole object is best.
+            # But the 'all_grades' list is what returns.
+            
+            # Ensure we handle the "grading" key
+            if "grading" in grade_result:
+                 # Flatten for compatibility with expected "score" in response? 
+                 # Or just return as is. Let's return as is, BUT ensure we don't break simple clients.
+                 # The user wants details.
+                 pass
+            
             grade_result["answer_sheet_id"] = sheet.answer_sheet_id
             grade_result["q_no"] = r.q_no
             all_grades.append(grade_result)
@@ -243,8 +256,11 @@ async def analyze_full_sheet(request_list: List[AnswerSheet]) -> List[AnswerShee
                      grade_result = {"score": 0, "feedback": "Error: Empty AI response", "citation": None}
             
             # Update StudentAnswer fields
-            r.student_answer.marks_awarded = grade_result.get("score", 0)
-            r.student_answer.feedback = grade_result.get("feedback", "")
+            # Extract from 'grading' key if present (new format), else assume flat (old format fallback)
+            grading_data = grade_result.get("grading", grade_result)
+            
+            r.student_answer.marks_awarded = grading_data.get("score", 0)
+            r.student_answer.feedback = grading_data.get("feedback", "")
             # Determine correctness (simple logic: score == max_marks)
             max_m = r.question_context.max_marks or 1
             r.student_answer.is_correct = (r.student_answer.marks_awarded == max_m)

@@ -110,21 +110,35 @@ class GradingAgent:
              }
         
         prompt = f"""
-        Role: Strict Academic Grader for {self.subject}.
-        Task: Grade the student's answer based ONLY on the provided Context (Ground Truth).
+        Role: Strict Academic Grader and Subject Matter Expert for {self.subject}.
+        
+        Primary Objectives:
+        1. REFERENCE: Search the provided 'Context' strictly to find the ground truth for the question.
+        2. EXTRACTION: Identify specific source details (Chapter, Topic, Semester, Page No) present in the text.
+        3. SOLUTION: Formulate the ideal Correct Answer based *only* on the Context.
+        4. EVALUATION: Compare the Student Answer against the Correct Answer and assign a score.
+
+        Context (Official Subject Knowledge Base):
+        {context}
         
         Question: {question}
         Student Answer: {answer}
         Max Marks: {max_marks}
         
-        Context (Official Textbook):
-        {context}
-        
-        Output JSON:
+        Output JSON format strictly:
         {{
-            "score": float, 
-            "feedback": "Concise justification",
-            "citation": "Quote from context used for grading"
+            "correct_answer_from_context": "The ideal answer derived strictly from the provided context.",
+            "source_metadata": {{
+                "subject": "{self.subject}",
+                "semester": "Extract from context text or 'Unknown'",
+                "chapter": "Extract chapter name/number from context text or 'Unknown'",
+                "topic": "Extract specific topic from context text or 'Unknown'"
+            }},
+            "grading": {{
+                "score": float, 
+                "feedback": "Concise feedback explaining the gap between student answer and ground truth.",
+                "citation": "Direct quote from context used for verification"
+            }}
         }}
         """
         

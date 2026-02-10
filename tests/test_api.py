@@ -47,7 +47,9 @@ def test_evaluate_answer(mock_gemini, mock_supabase):
     data = response.json()
     assert "results" in data
     assert len(data["results"]) >= 1
-    assert "score" in data["results"][0]
+    # Updated to handle new nested structure
+    grading_data = data["results"][0].get("grading", data["results"][0])
+    assert "score" in grading_data
 
 def test_analyze_full_sheet(mock_gemini, mock_supabase):
     payload = [get_sample_answer_sheet()]
