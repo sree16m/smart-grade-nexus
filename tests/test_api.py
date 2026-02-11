@@ -101,12 +101,8 @@ def test_ingest_knowledge(mock_gemini, mock_supabase):
     assert response.status_code == 200
     res_json = response.json()
     assert res_json["status"] == "success"
-    
-    # Verify mock was called with correct metadata
-    # The IngestionService processes this, so we check if process_document was called effectively
-    # by checking if Supabase insert was triggered.
-    # In a real unit test for the service, we'd check the exact metadata dict.
-    mock_supabase.table.return_value.insert.return_value.execute.assert_called()
+    assert res_json["data"]["status"] == "processing"
+    assert "started" in res_json["data"]["message"]
 
 def test_ingest_knowledge_defaults(mock_gemini, mock_supabase):
     """Test that ingestion works even when ALL optional fields (including subject/book) are missing."""
@@ -117,6 +113,7 @@ def test_ingest_knowledge_defaults(mock_gemini, mock_supabase):
     response = client.post("/api/v1/knowledge/ingest", data=data, files=files)
     
     assert response.status_code == 200
+    assert response.json()["data"]["status"] == "processing"
 
 def test_delete_endpoints(mock_gemini, mock_supabase):
     # Test Clear

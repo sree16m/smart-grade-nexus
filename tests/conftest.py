@@ -67,5 +67,4 @@ def mock_ocr(monkeypatch):
     
     import app.services.ingestion
     monkeypatch.setattr(app.services.ingestion, "pytesseract", mock_pytesseract)
-    monkeypatch.setattr(app.services.ingestion, "convert_from_bytes", MagicMock(return_value=[]))
 

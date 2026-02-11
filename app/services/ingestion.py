@@ -2,7 +2,7 @@ import fitz  # PyMuPDF
 import google.generativeai as genai
 from supabase import create_client, Client
 from app.core.config import settings
-from typing import List, Dict, Any
+from typing import List, Dict, Any, AsyncGenerator
 import asyncio
 import re
 import pytesseract
@@ -17,50 +17,44 @@ class IngestionService:
     def __init__(self):
         self.embedding_model = "models/gemini-embedding-001"
 
-    async def parse_pdf(self, file_content: bytes) -> str:
-        """Extracts text from a PDF file with memory-efficient OCR fallback."""
-        def _parse():
-            doc = fitz.open(stream=file_content, filetype="pdf")
-            text = ""
-            for page in doc:
-                text += page.get_text()
+    async def parse_pdf(self, file_content: bytes) -> AsyncGenerator[str, None]:
+        """Extracts text from a PDF file as a stream of pages with OCR fallback."""
+        def _get_doc():
+            return fitz.open(stream=file_content, filetype="pdf")
             
-            # --- Robust OCR Trigger Logic ---
-            text_stripped = text.strip()
-            
-            # 1. Check if too short
-            is_too_short = len(text_stripped) < 50
-            
-            # 2. Check for "Garbage" or Non-English density
-            english_chars = len(re.findall(r'[a-zA-Z]', text_stripped))
-            density = english_chars / len(text_stripped) if len(text_stripped) > 0 else 0
-            is_low_density = len(text_stripped) > 0 and density < 0.3 # Less than 30% English
-            
-            if is_too_short or is_low_density:
-                reason = "too short" if is_too_short else f"low English density ({density:.1%})"
-                print(f"Extraction results were poor ({reason}). Falling back to page-by-page Tesseract OCR...")
-                
-                ocr_text = ""
-                # Use page-by-page processing to stay under 512MB limit
-                for i in range(len(doc)):
-                    page = doc.load_page(i)
-                    # Higher DPI can improve OCR but uses more memory. 150-200 is usually plenty.
-                    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2)) 
+        doc = await asyncio.to_thread(_get_doc)
+        
+        # Heuristic to decide if we need OCR: Check first 3 pages
+        sample_text = ""
+        for i in range(min(3, len(doc))):
+            sample_text += doc[i].get_text()
+        
+        text_stripped = sample_text.strip()
+        is_too_short = len(text_stripped) < 50
+        english_chars = len(re.findall(r'[a-zA-Z]', text_stripped))
+        density = english_chars / len(text_stripped) if len(text_stripped) > 0 else 0
+        is_low_density = len(text_stripped) > 0 and density < 0.3
+        
+        use_ocr = is_too_short or is_low_density
+        
+        if use_ocr:
+            reason = "too short" if is_too_short else f"low English density ({density:.1%})"
+            print(f"Extraction quality is low ({reason}). Using page-by-page OCR...")
+            for i in range(len(doc)):
+                def _ocr_page(page_num):
+                    page = doc.load_page(page_num)
+                    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
                     img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                    
-                    ocr_text += pytesseract.image_to_string(img)
-                    
-                    # Force Memory Cleanup for this page
-                    del pix
-                    del img
-                    
-                doc.close()
-                return ocr_text
+                    text = pytesseract.image_to_string(img)
+                    return text
                 
-            doc.close()
-            return text
-            
-        return await asyncio.to_thread(_parse)
+                page_text = await asyncio.to_thread(_ocr_page, i)
+                yield page_text
+        else:
+            for page in doc:
+                yield page.get_text()
+        
+        doc.close()
 
     def chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
         """
@@ -138,46 +132,98 @@ class IngestionService:
         return await asyncio.to_thread(_embed)
 
     async def process_document(self, file_content: bytes, metadata: Dict[str, Any]):
-        """Main Orchestrator: Parse -> Chunk -> Embed -> Store."""
-        # 1. Parse
-        raw_text = await self.parse_pdf(file_content)
-        
-        if not raw_text.strip():
-            raise ValueError("No text extracted. PDF might be empty or corrupted even after OCR attempt.")
-        
-        # 2. Chunk (Run in threadpool to avoid blocking event loop)
-        chunks = await asyncio.to_thread(self.chunk_text, raw_text)
-        
-        # 3. Embed (Parallelized with Semaphore)
-        sem = asyncio.Semaphore(10) # Limit concurrent requests to avoid rate limits
-        
-        async def _process_chunk(i: int, chunk: str):
-            if not chunk.strip():
-                return None
-            
-            async with sem:
-                embedding = await self.get_embedding(chunk)
-                
-            return {
-                "content": chunk,
-                "metadata": metadata,
-                "embedding": embedding,
-                "chunk_index": i
-            }
+        """Main Orchestrator (Background): Parse -> Chunk -> Embed -> Store Incrementally."""
+        book_name = metadata.get("book_name")
 
-        tasks = [_process_chunk(i, chunk) for i, chunk in enumerate(chunks)]
-        results = await asyncio.gather(*tasks)
+        async def _run_ingestion():
+            try:
+                # 1. Idempotency: Clear existing chunks for this book
+                if book_name:
+                    print(f"Clearing existing entries for book: {book_name}")
+                    await self.delete_book(book_name)
+
+                batch_text = ""
+                batch_page_count = 0
+                total_chunks = 0
+                
+                async for page_text in self.parse_pdf(file_content):
+                    batch_text += page_text + "\n"
+                    batch_page_count += 1
+                    
+                    if batch_page_count >= 5: # Process every 5 pages
+                        print(f"Processing batch of {batch_page_count} pages for {book_name}...")
+                        chunks_added = await self._process_batch(batch_text, metadata)
+                        total_chunks += chunks_added
+                        batch_text = ""
+                        batch_page_count = 0
+                
+                # Process remaining pages
+                if batch_text:
+                    print(f"Processing final batch for {book_name}...")
+                    total_chunks += await self._process_batch(batch_text, metadata)
+                
+                print(f"Ingestion complete for '{book_name}'. Total chunks stored: {total_chunks}")
+            except Exception as e:
+                print(f"CRITICAL ERROR during ingestion for {book_name}: {str(e)}")
+
+        # Start background task
+        asyncio.create_task(_run_ingestion())
         
-        # Filter out None results (empty chunks)
-        records = [r for r in results if r is not None]
+        return {
+            "status": "processing", 
+            "message": f"Ingestion started in background for '{book_name}'. Progress will appear in Supabase shortly."
+        }
+
+    async def _process_batch(self, text: str, metadata: Dict[str, Any], retries: int = 3) -> int:
+        """Process a text batch: Chunk -> Embed (with retry) -> Store (with retry)."""
+        if not text.strip():
+            return 0
             
-        # 4. Store in Supabase
-        if records:
-            # Assumes a table 'documents' exists with 'embedding' column
-            response = supabase.table("documents").insert(records).execute()
-            return {"status": "success", "chunks_processed": len(records)}
-        else:
-             return {"status": "success", "chunks_processed": 0}
+        chunks = self.chunk_text(text)
+        if not chunks:
+            return 0
+
+        # Limited concurrency for embeddings
+        sem = asyncio.Semaphore(10)
+        
+        async def _proc_chunk(i: int, chunk: str):
+            if not chunk.strip(): return None
+            
+            for attempt in range(retries):
+                try:
+                    async with sem:
+                        embedding = await self.get_embedding(chunk)
+                        return {
+                            "content": chunk,
+                            "metadata": metadata,
+                            "embedding": embedding,
+                            "chunk_index": i
+                        }
+                except Exception as e:
+                    if attempt == retries - 1:
+                        print(f"Embedding failed for chunk {i} after {retries} attempts: {e}")
+                        return None
+                    await asyncio.sleep(2 ** attempt)
+
+        tasks = [_proc_chunk(i, chunk) for i, chunk in enumerate(chunks)]
+        results = await asyncio.gather(*tasks)
+        records = [r for r in results if r]
+
+        if not records:
+            return 0
+
+        # Insert batch into Supabase with retry
+        for attempt in range(retries):
+            try:
+                supabase.table("documents").insert(records).execute()
+                return len(records)
+            except Exception as e:
+                if attempt == retries - 1:
+                    print(f"Supabase insert failed for batch after {retries} attempts: {e}")
+                    return 0
+                await asyncio.sleep(2 ** attempt)
+        
+        return 0
 
     async def get_uploaded_books(self) -> List[Dict]:
         """Fetches unique books metadata via RPC."""
