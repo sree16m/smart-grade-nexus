@@ -130,6 +130,7 @@ async def ingest_knowledge(
             "board": board,
             "school": school,
             "class": student_class,
+            "student_class": student_class,
             "semester": semester,
             "ingestion_mode": ingestion_mode
         }
@@ -140,6 +141,11 @@ async def ingest_knowledge(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get(f"{settings.API_V1_STR}/knowledge/ingest/jobs")
+async def list_ingest_jobs():
+    """Returns all current ingestion jobs."""
+    return {"status": "success", "data": job_registry.list_jobs()}
 
 @app.get(f"{settings.API_V1_STR}/knowledge/ingest/status/{{book_name}}")
 async def get_ingest_status(book_name: str):

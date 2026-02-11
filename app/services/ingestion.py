@@ -18,6 +18,39 @@ supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 from app.services.job_registry import job_registry
 
 class IngestionService:
+    def _safe_json_loads(self, text: str) -> Dict[str, Any]:
+        """
+        Robustly parses JSON from AI responses, handling markdown blocks 
+        and invalid LaTeX escapes.
+        """
+        if not text:
+            return {}
+            
+        # 1. Remove markdown code blocks if present
+        if "```json" in text:
+            text = text.split("```json")[1].split("```")[0]
+        elif "```" in text:
+            text = text.split("```")[1].split("```")[0]
+        
+        text = text.strip()
+        
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            # 2. Try to fix unescaped backslashes (common in LaTeX)
+            # We aggressively escape backslashes that don't look like valid JSON escapes
+            # valid: \", \\, \/, \b, \f, \n, \r, \t, \u
+            # We'll just try to escape all single backslashes and see if it helps.
+            # (Doubling them)
+            fixed_text = re.sub(r'(?<!\\)\\(?!["\\/bfnrtu])', r'\\\\', text)
+            try:
+                return json.loads(fixed_text)
+            except Exception as e:
+                print(f"Safe JSON: Deep cleaning failed: {e}")
+                # 3. Last resort: simple regex cleanup for most common markers
+                # (Still failing? Return minimal valid dict)
+                return {}
+
     def __init__(self):
         self.embedding_model = settings.EMBEDDING_MODEL
 
@@ -137,6 +170,10 @@ class IngestionService:
             - lang: "en" or "te" (dominant language for content).
 
             Also, provide a brief summary and a list of key concepts found on this page.
+            
+            IMPORTANT: Use double backslashes for all LaTeX formulas within the JSON string 
+            (e.g., "content": "$\\\\sqrt{x}$") to ensure valid JSON compatibility.
+
             Return the result in JSON format:
             {
               "content": "the transcribed markdown text",
@@ -160,7 +197,18 @@ class IngestionService:
                     )
                 
                 response = await asyncio.to_thread(_gen)
-                res_data = json.loads(response.text)
+                res_data = self._safe_json_loads(response.text)
+                
+                # Fallback if safe_loads returns empty
+                if not res_data or "content" not in res_data:
+                     res_data = {
+                         "content": response.text if response.text else f"[AI Parse Error on Page {i+1}]",
+                         "page_summary": "Extraction failed",
+                         "key_concepts": [],
+                         "is_instructional_content": True,
+                         "structural_metadata": {}
+                     }
+
                 if book_name:
                     job_registry.update_progress(book_name, i + 1)
                 yield res_data

@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import time
 
 class JobRegistry:
@@ -52,6 +52,9 @@ class JobRegistry:
 
     def get_status(self, book_name: str) -> Optional[Dict[str, Any]]:
         return self._jobs.get(book_name)
+
+    def list_jobs(self) -> List[Dict[str, Any]]:
+        return [{"book_name": name, **data} for name, data in self._jobs.items()]
 
 # Singleton Instance
 job_registry = JobRegistry()
