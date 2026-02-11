@@ -186,43 +186,45 @@ async def evaluate_answer(request_list: List[AnswerSheet]):
     all_grades = []
     
     for sheet in request_list:
-        agent = GradingAgent(subject=sheet.exam_details.subject)
+        subject = sheet.exam_details.subject
+        grading_agent = GradingAgent(subject=subject)
+        topic_agent = TopicAgent(subject=subject)
         
         for r in sheet.responses:
-            # Extract grading inputs
+            # 1. Detect Chapter first for precision RAG
             q_text = r.question_context.text_primary.en
+            questions_dicts = [{"id": str(r.q_no), "text": q_text}]
+            topic_results = await topic_agent.categorize(questions_dicts)
+            detected_chapter = topic_results[0].get("chapter") if topic_results else None
+            
+            # 2. Extract grading inputs
             student_ans = r.student_answer.text
             # Use diagram description if available
             if r.student_answer.diagram_description:
                 student_ans += f" [Diagram: {r.student_answer.diagram_description}]"
                 
-            max_marks = r.question_context.max_marks
-            
-            # Grade it
+            max_marks = r.question_context.max_marks or 1
             student_class = str(sheet.exam_details.class_level) if sheet.exam_details.class_level else "9"
-            grade_result = await agent.evaluate(
+            
+            # 3. Grade it with Chapter Filter
+            grade_result = await grading_agent.evaluate(
                 question=q_text,
                 answer=student_ans,
                 max_marks=max_marks,
-                student_class=student_class
+                student_class=student_class,
+                chapter=detected_chapter
             )
             
-            # Append ID info to result
-            # Flatten response slightly for easier consumption, or keep it nested.
-            # Let's keep the new structure but ensure 'score' is top-level for backwards compat if needed by frontend
-            # Actually, let's just expose the new structure directly but maybe add 'score' at top level for safety?
-            # User wants "correct answer, details of subject..." so returning the whole object is best.
-            # But the 'all_grades' list is what returns.
-            
-            # Ensure we handle the "grading" key
-            if "grading" in grade_result:
-                 # Flatten for compatibility with expected "score" in response? 
-                 # Or just return as is. Let's return as is, BUT ensure we don't break simple clients.
-                 # The user wants details.
-                 pass
+            # 4. Process result
+            grading_data = grade_result.get("grading", grade_result) # Handle nested vs flat
+            score = grading_data.get("score", 0)
             
             grade_result["answer_sheet_id"] = sheet.answer_sheet_id
             grade_result["q_no"] = r.q_no
+            
+            # Nuanced is_correct: >= 90%
+            grade_result["is_correct"] = score >= (0.9 * max_marks)
+            
             all_grades.append(grade_result)
 
     return {"results": all_grades}
@@ -264,12 +266,16 @@ async def analyze_full_sheet(request_list: List[AnswerSheet]) -> List[AnswerShee
                 student_ans += f" [Diagram: {r.student_answer.diagram_description}]"
             
             # Call Grading Agent
+            detected_chapter = r.topic_analysis.get("chapter") if r.topic_analysis else None
             student_class = str(sheet.exam_details.class_level) if sheet.exam_details.class_level else "9"
+            max_marks = r.question_context.max_marks or 1
+            
             grade_result = await grading_agent.evaluate(
                 question=q_text,
                 answer=student_ans,
-                max_marks=r.question_context.max_marks or 1,
-                student_class=student_class
+                max_marks=max_marks,
+                student_class=student_class,
+                chapter=detected_chapter
             )
             
             # Handle List vs Dict response from AI
@@ -282,12 +288,11 @@ async def analyze_full_sheet(request_list: List[AnswerSheet]) -> List[AnswerShee
             # Update StudentAnswer fields
             # Extract from 'grading' key if present (new format), else assume flat (old format fallback)
             grading_data = grade_result.get("grading", grade_result)
+            score = grading_data.get("score", 0)
             
-            r.student_answer.marks_awarded = grading_data.get("score", 0)
+            r.student_answer.marks_awarded = score
             r.student_answer.feedback = grading_data.get("feedback", "")
-            # Determine correctness (simple logic: score == max_marks)
-            max_m = r.question_context.max_marks or 1
-            r.student_answer.is_correct = (r.student_answer.marks_awarded == max_m)
+            r.student_answer.is_correct = score >= (0.9 * max_marks)
             
     return request_list
 

@@ -129,12 +129,24 @@ class IngestionService:
             - Preserve table structures.
             - Do not include page numbers or headers/footers.
             
+            Identify the structural context:
+            - chapter_number: e.g., "5"
+            - chapter_title: e.g., "Introduction to Euclid's Geometry"
+            - subtopic: The specific section heading on this page if any.
+            - primary_language: "en" or "te" (dominant language for content).
+
             Also, provide a brief summary and a list of key concepts found on this page.
             Return the result in JSON format:
             {
               "content": "the transcribed markdown text",
               "page_summary": "1-2 sentence overview",
-              "key_concepts": ["concept1", "concept2"]
+              "key_concepts": ["concept1", "concept2"],
+              "structural_metadata": {
+                "chapter_number": "string",
+                "chapter_title": "string",
+                "subtopic": "string",
+                "lang": "string"
+              }
             }
             """
 
@@ -264,9 +276,15 @@ class IngestionService:
                         print(f"AI Ingestion: Processing enriched page {total_chunks+1} for {book_name}...")
                         # Merge page-level metadata into chunk metadata
                         page_metadata = metadata.copy()
+                        struct_meta = page_data.get("structural_metadata", {})
+                        
                         page_metadata.update({
                             "page_summary": page_data.get("page_summary"),
-                            "key_concepts": page_data.get("key_concepts")
+                            "key_concepts": page_data.get("key_concepts"),
+                            "chapter": struct_meta.get("chapter_number"),
+                            "chapter_title": struct_meta.get("chapter_title"),
+                            "subtopic": struct_meta.get("subtopic"),
+                            "lang": struct_meta.get("lang")
                         })
                         chunks_added = await self._process_batch(page_data["content"], page_metadata)
                         total_chunks += chunks_added

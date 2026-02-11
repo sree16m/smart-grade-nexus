@@ -33,8 +33,8 @@ async def generate_with_retry(model, prompt, retries=3, delay=2):
 
 # ... imports ...
 
-async def search_knowledge_base(query: str, subject: str, limit: int = 3) -> str:
-    """Retrieves relevant chunks from Vector DB (Non-blocking)."""
+async def search_knowledge_base(query: str, subject: str, limit: int = 5, filter: Dict[str, Any] = None) -> str:
+    """Retrieves relevant chunks from Vector DB (Non-blocking) with Metadata Filtering."""
     
     # 1. Generate Query Embedding (Threadpool)
     def _embed():
@@ -48,14 +48,14 @@ async def search_knowledge_base(query: str, subject: str, limit: int = 3) -> str
     query_emb = await asyncio.to_thread(_embed)
     
     # 2. Search Supabase (Threadpool)
-    def _search(search_subject):
+    def _search(search_filter):
         return supabase.rpc(
             "match_documents",
             {
                 "query_embedding": query_emb,
                 "match_threshold": 0.3, # Slightly lower threshold for broader concept matching
                 "match_count": 15,      # Fetch more for internal re-ranking
-                "filter": {"subject": search_subject}
+                "filter": search_filter
             }
         ).execute()
 
@@ -80,11 +80,16 @@ async def search_knowledge_base(query: str, subject: str, limit: int = 3) -> str
 
     results = []
     for s in search_subjects:
-        response = await asyncio.to_thread(_search, s)
+        # Prepare filter for this subject
+        current_filter = {"subject": s}
+        if filter:
+            current_filter.update(filter)
+            
+        response = await asyncio.to_thread(_search, current_filter)
         if response.data:
             results.extend(response.data)
             # If we found enough semantic matches, we can stop
-            if len(results) >= 5:
+            if len(results) >= limit + 10: # Fetch slightly more than needed for re-ranking
                 break
         
     vector_results = results
@@ -133,7 +138,10 @@ async def search_knowledge_base(query: str, subject: str, limit: int = 3) -> str
 
     # 3. Format Context
     context = ""
-    for item in top_docs:
+    print(f"RAG Debug: Found {len(top_docs)} relevant chunks.")
+    for i, item in enumerate(top_docs):
+        sim = item.get('similarity', 0)
+        print(f"CHUNK {i+1} [Sim: {sim:.3f}]: {item['content'][:150]}...")
         context += f"---\n{item['content']}\n"
     return context
 
@@ -150,13 +158,13 @@ class TopicAgent:
             context = await search_knowledge_base(q_text, self.subject, limit=2)
             
             prompt = f"""
-            Task: Identify the specific Subject Topic and Chapter for the following question.
+            Task: Identify the specific Chapter Number and Subject Topic for the following question.
             Context from Textbook:
             {context}
             
             Question: {q_text}
             
-            Output JSON only: {{ "topic_path": "Chapter > Subtopic", "confidence": 0.95 }}
+            Output JSON only: {{ "chapter": "string", "topic": "string", "confidence": 0.95 }}
             """
             
             # Non-blocking generation with retry
@@ -165,7 +173,8 @@ class TopicAgent:
                 data = json.loads(response.text)
                 results.append({
                     "question_id": q['id'],
-                    "topic_path": data.get("topic_path", "Unknown"),
+                    "chapter": data.get("chapter", "Unknown"),
+                    "topic": data.get("topic", "Unknown"),
                     "confidence": data.get("confidence", 0.0)
                 })
             except:
@@ -177,10 +186,16 @@ class GradingAgent:
     def __init__(self, subject: str):
         self.subject = subject
 
-    async def evaluate(self, question: str, answer: str, max_marks: int, student_class: str = "9") -> Dict:
+    async def evaluate(self, question: str, answer: str, max_marks: int, student_class: str = "9", chapter: str = None) -> Dict:
         """Grades answer using Ground Truth from KB."""
-        # RAG: Get the official explanation - Increased limit for complex topics like Euclid
-        context = await search_knowledge_base(question, self.subject, limit=6)
+        # 1. Prepare Filter
+        search_filter = {}
+        if chapter and chapter != "Unknown":
+            search_filter["chapter"] = chapter
+            print(f"RAG Filter: Hard-filtering search scope for Chapter {chapter}")
+
+        # RAG: Get the official explanation
+        context = await search_knowledge_base(question, self.subject, limit=6, filter=search_filter)
         
         # 1. Fail fast if no context is found
         if not context.strip():
@@ -191,37 +206,32 @@ class GradingAgent:
              }
         
         prompt = f"""
-        Role: Strict math teacher evaluating a Class {student_class} answer based ONLY on the provided textbook content.
+        Role: You are a very strict SCERT Class {student_class} Maths teacher. 
+        Grade using ONLY the textbook excerpts provided below. Ignore all external knowledge.
         
-        Textbook Content (Official Ground Truth):
+        Textbook Excerpts (Official Ground Truth):
         {context}
         
-        Question: {question}
+        Question: {question} (Max Marks: {max_marks})
         Student's Answer: {answer}
-        Max Marks: {max_marks}
         
-        Evaluation Criteria:
-        1. Accuracy of concepts: Must match textbook definitions and examples exactly.
-        2. Step-by-step reasoning: Award points for each correct logical step. Use partial marks for effort if the reasoning is sound but the final result is wrong.
-        3. Completeness: Check if all parts of the question are addressed.
-        
-        Constraint: Do NOT add external knowledge. If the context does not contain the answer, state "Answer not found in context" clearly.
+        Rules for Grading:
+        - Award marks ONLY for exact matches to textbook concepts or logical steps stated in the excerpts.
+        - Award partial marks only for correct textbook-aligned steps.
+        - Score 0 if the topic is not mentioned in the provided excerpts.
+        - Penalize heavily for missing key points or including information not in the textbook.
+        - Be EXTREMELY STRICT. If the student answers logically but the textbook isn't found in context, awarding 0 is acceptable.
 
         Output JSON format strictly:
         {{
-            "correct_answer_from_context": "The ideal answer derived strictly from the provided context.",
-            "source_metadata": {{
-                "subject": "{self.subject}",
-                "chapter": "Extract chapter name/number from context or 'Unknown'",
-                "topic": "Extract specific topic from context or 'Unknown'"
+            "score": float, 
+            "feedback": "Specific improvements, citing textbook concepts or missing steps.",
+            "breakdown": {{
+                "concepts": "X / Y",
+                "steps": "X / Y",
+                "completeness": "X / Y"
             }},
-            "grading": {{
-                "score": float, 
-                "max_score": {max_marks},
-                "score_breakdown": "e.g., 4/10 concepts, 3/10 steps, 3/10 completeness",
-                "feedback": "Specific improvements, citing textbook page/chapter where possible.",
-                "citation": "Direct quote from context used for verification"
-            }}
+            "citation": "Chapter/Page quote or 'None'"
         }}
         """
         
