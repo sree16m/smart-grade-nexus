@@ -8,8 +8,8 @@ import json
 genai.configure(api_key=settings.GOOGLE_API_KEY)
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 # Initialize RAG Model
-embedding_model = "models/gemini-embedding-001"
-generative_model = genai.GenerativeModel("gemini-2.0-flash")
+embedding_model = settings.EMBEDDING_MODEL
+generative_model = genai.GenerativeModel(settings.GENERATIVE_MODEL)
 
 import asyncio
 import time
@@ -33,8 +33,10 @@ async def generate_with_retry(model, prompt, retries=3, delay=2):
 
 # ... imports ...
 
-async def search_knowledge_base(query: str, subject: str, limit: int = 5, filter: Dict[str, Any] = None) -> str:
+async def search_knowledge_base(query: str, subject: str, limit: int = None, filter: Dict[str, Any] = None) -> str:
     """Retrieves relevant chunks from Vector DB (Non-blocking) with Metadata Filtering."""
+    if limit is None:
+        limit = settings.DEFAULT_RAG_LIMIT
     
     # 1. Generate Query Embedding (Threadpool)
     def _embed():
@@ -42,7 +44,7 @@ async def search_knowledge_base(query: str, subject: str, limit: int = 5, filter
             model=embedding_model,
             content=query,
             task_type="retrieval_query",
-            output_dimensionality=768
+            output_dimensionality=settings.EMBEDDING_DIM
         )['embedding']
     
     query_emb = await asyncio.to_thread(_embed)
@@ -53,22 +55,14 @@ async def search_knowledge_base(query: str, subject: str, limit: int = 5, filter
             "match_documents",
             {
                 "query_embedding": query_emb,
-                "match_threshold": 0.3, # Slightly lower threshold for broader concept matching
-                "match_count": 15,      # Fetch more for internal re-ranking
+                "match_threshold": settings.MATCH_THRESHOLD,
+                "match_count": settings.MATCH_COUNT,
                 "filter": search_filter
             }
         ).execute()
 
     # Normalize/Map common subject variations
-    subject_map = {
-        "mathematics": ["Maths", "Math", "Mathematics"],
-        "maths": ["Mathematics", "Math", "Maths"],
-        "math": ["Mathematics", "Maths", "Math"],
-        "physics": ["Physics", "Physic"],
-        "biology": ["Biology", "Bio"],
-        "chemistry": ["Chemistry", "Chem"],
-        "euclid geometry": ["Maths", "Mathematics", "Math"]
-    }
+    subject_map = settings.SUBJECT_MAP
     
     search_subjects = [subject]
     # Add variations if they exist in the map (case-insensitive)
@@ -186,8 +180,10 @@ class GradingAgent:
     def __init__(self, subject: str):
         self.subject = subject
 
-    async def evaluate(self, question: str, answer: str, max_marks: int, student_class: str = "9", chapter: str = None, board: str = "SCERT") -> Dict:
+    async def evaluate(self, question: str, answer: str, max_marks: int, student_class: str = None, chapter: str = None, board: str = None) -> Dict:
         """Grades answer using Ground Truth from KB."""
+        if student_class is None: student_class = settings.DEFAULT_CLASS
+        if board is None: board = settings.DEFAULT_BOARD
         # 1. Prepare Filter
         search_filter = {}
         if chapter and chapter != "Unknown":

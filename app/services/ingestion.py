@@ -19,7 +19,7 @@ from app.services.job_registry import job_registry
 
 class IngestionService:
     def __init__(self):
-        self.embedding_model = "models/gemini-embedding-001"
+        self.embedding_model = settings.EMBEDDING_MODEL
 
     async def parse_pdf(self, file_content: bytes, book_name: str = None) -> AsyncGenerator[str, None]:
         """Extracts text from a PDF file as a stream of pages with OCR fallback."""
@@ -39,7 +39,7 @@ class IngestionService:
         text_stripped = sample_text.strip()
         
         # 1. Check if too short
-        is_too_short = len(text_stripped) < 50
+        is_too_short = len(text_stripped) < settings.OCR_MIN_TEXT_LENGTH
         
         # 2. Check for "Garbage" or Non-English density
         english_chars = len(re.findall(r'[a-zA-Z]', text_stripped))
@@ -48,8 +48,8 @@ class IngestionService:
         density = english_chars / len(text_stripped) if len(text_stripped) > 0 else 0
         garbage_ratio = garbage_chars / len(text_stripped) if len(text_stripped) > 0 else 0
         
-        is_low_density = len(text_stripped) > 0 and density < 0.3
-        is_high_garbage = garbage_ratio > 0.05 # More than 5% garbage characters
+        is_low_density = len(text_stripped) > 0 and density < settings.OCR_MIN_ENGLISH_DENSITY
+        is_high_garbage = garbage_ratio > settings.OCR_MAX_GARBAGE_RATIO # More than 5% garbage characters
         
         use_ocr = is_too_short or is_low_density or is_high_garbage
         
@@ -100,7 +100,7 @@ class IngestionService:
         total_pages = len(doc)
         print(f"AI Ingestion: Starting Gemini Vision transcription for {total_pages} pages...")
 
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        model = genai.GenerativeModel(settings.GENERATIVE_MODEL)
         
         for i in range(total_pages):
             # Check for cancellation
@@ -169,11 +169,13 @@ class IngestionService:
 
         doc.close()
 
-    def chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
+    def chunk_text(self, text: str, chunk_size: int = None, overlap: int = None) -> List[str]:
         """
         Robust Recursive Chunker.
         Splits text by decreasing structural hierarchy: \n\n -> \n -> sentence -> char.
         """
+        if chunk_size is None: chunk_size = settings.CHUNK_SIZE
+        if overlap is None: overlap = settings.CHUNK_OVERLAP
         if not text:
             return []
 
@@ -238,7 +240,7 @@ class IngestionService:
                 model=self.embedding_model,
                 content=text,
                 task_type="retrieval_document",
-                output_dimensionality=768
+                output_dimensionality=settings.EMBEDDING_DIM
             )
             return result['embedding']
             
@@ -296,7 +298,7 @@ class IngestionService:
                         batch_text += page_text + "\n"
                         batch_page_count += 1
                         
-                        if batch_page_count >= 5: # Process every 5 pages
+                        if batch_page_count >= settings.INGESTION_BATCH_SIZE: # Process every N pages
                             print(f"Processing batch of {batch_page_count} pages for {book_name}...")
                             chunks_added = await self._process_batch(batch_text, metadata)
                             total_chunks += chunks_added
@@ -340,7 +342,7 @@ class IngestionService:
             return 0
 
         # Limited concurrency for embeddings
-        sem = asyncio.Semaphore(10)
+        sem = asyncio.Semaphore(settings.MAX_EMBEDDING_CONCURRENCY)
         
         async def _proc_chunk(i: int, chunk: str):
             if not chunk.strip(): return None
