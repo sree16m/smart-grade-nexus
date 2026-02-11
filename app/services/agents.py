@@ -66,10 +66,10 @@ async def search_knowledge_base(query: str, subject: str, limit: int = None, fil
     
     search_subjects = [subject]
     # Add variations if they exist in the map (case-insensitive)
-    normalized_key = subject.lower()
+    normalized_key = subject.strip().lower()
     if normalized_key in subject_map:
         for variation in subject_map[normalized_key]:
-            if variation.lower() != normalized_key:
+            if variation not in search_subjects:
                 search_subjects.append(variation)
 
     results = []
