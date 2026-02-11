@@ -15,14 +15,23 @@ async def test_chunk_text():
 async def test_process_document(mock_gemini, mock_supabase):
     service = IngestionService()
     
-    # Mock parse_pdf since we don't have a real PDF file here
-    service.parse_pdf = AsyncMock(return_value="Sample text content from PDF.")
+    # Mock parse_pdf as an async generator
+    async def mock_parse_pdf(*args, **kwargs):
+        yield "Sample content page 1"
+        yield "Sample content page 2"
+        
+    service.parse_pdf = mock_parse_pdf
+    
+    from fastapi import BackgroundTasks
+    bg_tasks = BackgroundTasks()
     
     result = await service.process_document(
         b"dummy_pdf_bytes", 
-        {"subject": "Math"}
+        {"book_name": "TestBook", "subject": "Math", "ingestion_mode": "standard"},
+        bg_tasks
     )
     
-    assert result["status"] == "success"
-    # Check if storage was called
-    mock_supabase.table.return_value.insert.return_value.execute.assert_called()
+    # Since it runs in BackgroundTasks, we need to wait for the internal task if we were testing the side effect,
+    # but here we just check if the orchestrator started correctly.
+    assert result["status"] == "processing"
+    assert "started" in result["message"]

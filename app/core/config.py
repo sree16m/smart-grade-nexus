@@ -25,7 +25,8 @@ class Settings(BaseSettings):
     EMBEDDING_DIM: int = 768
     MATCH_THRESHOLD: float = 0.3
     MATCH_COUNT: int = 15
-    DEFAULT_RAG_LIMIT: int = 5
+    CATEGORIZATION_RAG_LIMIT: int = 2
+    GRADING_RAG_LIMIT: int = 6
     
     # Ingestion Settings
     CHUNK_SIZE: int = 1000

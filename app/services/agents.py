@@ -149,7 +149,7 @@ class TopicAgent:
         for q in questions:
             q_text = q['text']
             # RAG: Find where this concept is mentioned in the book
-            context = await search_knowledge_base(q_text, self.subject, limit=2)
+            context = await search_knowledge_base(q_text, self.subject, limit=settings.CATEGORIZATION_RAG_LIMIT)
             
             prompt = f"""
             Task: Identify the specific Chapter Number and Subject Topic for the following question.
@@ -191,7 +191,7 @@ class GradingAgent:
             print(f"RAG Filter: Hard-filtering search scope for Chapter {chapter}")
 
         # RAG: Get the official explanation
-        context = await search_knowledge_base(question, self.subject, limit=6, filter=search_filter)
+        context = await search_knowledge_base(question, self.subject, limit=settings.GRADING_RAG_LIMIT, filter=search_filter)
         
         # 1. Fail fast if no context is found
         if not context.strip():
