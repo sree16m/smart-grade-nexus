@@ -52,6 +52,16 @@ class Settings(BaseSettings):
     OCR_MIN_ENGLISH_DENSITY: float = 0.3
     OCR_MAX_GARBAGE_RATIO: float = 0.05
 
+    # Subject-Specific Grading Rules
+    # These are added to the general grading guidelines in agents.py
+    SUBJECT_RULES: Dict[str, str] = {
+        "Maths": "Prioritize step-by-step logical reasoning, correct use of LaTeX formulas, and numerical accuracy.",
+        "Science": "Focus on precise scientific terminology, correct explanation of processes, and accurate reference to data/diagrams.",
+        "Social Studies": "Prioritize historical accuracy, depth of concept explanation, and mention of key dates/events.",
+        "Biology": "Check for correct biological terms, structural accuracy in descriptions, and process flow.",
+        "English": "Focus on grammatical correctness, contextually appropriate vocabulary, and clarity of expression."
+    }
+
     class Config:
         case_sensitive = True
 

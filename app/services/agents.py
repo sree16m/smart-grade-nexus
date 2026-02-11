@@ -201,10 +201,15 @@ class GradingAgent:
                  "citation": None
              }
         
+        # Subject-specific strategy
+        subject_rule = settings.SUBJECT_RULES.get(self.subject, settings.SUBJECT_RULES.get(self.subject.capitalize(), "Be strict and follow the textbook excerpts exactly."))
+
         prompt = f"""
         Role: You are a very strict {board} Class {student_class} {self.subject} teacher. 
         Grade using ONLY the textbook excerpts provided below. Ignore all external knowledge.
         
+        {self.subject} Grading Strategy: {subject_rule}
+
         Textbook Excerpts (Official Ground Truth):
         {context}
         
