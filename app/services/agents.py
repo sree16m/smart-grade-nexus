@@ -53,8 +53,8 @@ async def search_knowledge_base(query: str, subject: str, limit: int = 3) -> str
             "match_documents",
             {
                 "query_embedding": query_emb,
-                "match_threshold": 0.4, # Slightly lower threshold for broader concept matching
-                "match_count": 10,
+                "match_threshold": 0.3, # Slightly lower threshold for broader concept matching
+                "match_count": 15,      # Fetch more for internal re-ranking
                 "filter": {"subject": search_subject}
             }
         ).execute()
@@ -66,7 +66,8 @@ async def search_knowledge_base(query: str, subject: str, limit: int = 3) -> str
         "math": ["Mathematics", "Maths", "Math"],
         "physics": ["Physics", "Physic"],
         "biology": ["Biology", "Bio"],
-        "chemistry": ["Chemistry", "Chem"]
+        "chemistry": ["Chemistry", "Chem"],
+        "euclid geometry": ["Maths", "Mathematics", "Math"]
     }
     
     search_subjects = [subject]
@@ -178,8 +179,8 @@ class GradingAgent:
 
     async def evaluate(self, question: str, answer: str, max_marks: int) -> Dict:
         """Grades answer using Ground Truth from KB."""
-        # RAG: Get the official explanation
-        context = await search_knowledge_base(question, self.subject, limit=3)
+        # RAG: Get the official explanation - Increased limit for complex topics like Euclid
+        context = await search_knowledge_base(question, self.subject, limit=6)
         
         # 1. Fail fast if no context is found
         if not context.strip():

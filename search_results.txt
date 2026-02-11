@@ -1,0 +1,323 @@
+
+--- Similarity: 0.701103716871278 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ["Euclid's Postulates", 'Straight Lines', 'Unique Line', 'Line Segment', 'Circles', 'Right Angles', 'Axioms'], 'page_summary': "This page introduces Euclid's first five postulates, which serve as the foundation for Euclidean geometry. It discusses the implications of each postulate and states a relevant axiom.", 'ingestion_mode': 'ai'} ---
+Now let us discuss Euclid's five postulates. They are :
+
+**Postulate 1**: A straight line may be drawn from any one point to any other point.
+
+Note that this postulate tells us that at least one straight line passes through two distinct points, but it does not say that there cannot be more than one such line. However, in his work, Euclid has frequently assumed, without mentioning, that there is a unique line joining two distinct points. We state this result in the form of an axiom as follows:
+
+**Axiom 5.1**: Given two distinct points, there is a unique line that passes through them.
+
+How many lines passing through P also pass through Q (see Fig. 5.4)? Only one, that is, the line PQ. How many lines passing through Q also pass through P? Only one, that is, the line PQ. Thus, the statement above is self-evident, and so is taken as an axiom.
+
+[Diagram: Figure 5.4 shows two points, P and Q, with multiple lines radiating from each point, including a line connecting P and Q.]
+
+--- Similarity: 0.69181544020081 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ["Euclid's Postulates", 'Straight Lines', 'Unique Line', 'Line Segment', 'Circles', 'Right Angles', 'Axioms'], 'page_summary': "This page introduces Euclid's first five postulates, which serve as the foundation for Euclidean geometry. It discusses the implications of each postulate and states a relevant axiom.", 'ingestion_mode': 'ai'} ---
+ the statement above is self-evident, and so is taken as an axiom.
+
+[Diagram: Figure 5.4 shows two points, P and Q, with multiple lines radiating from each point, including a line connecting P and Q.]
+
+**Postulate 2**: A terminated line can be produced indefinitely.
+
+Note that what we call a line segment now-a-days is what Euclid called a terminated line. So, according to the present day terms, the second postulate says that a line segment can be extended on either side to form a line (see Fig. 5.5).
+
+[Diagram: Figure 5.5 shows a line segment AB with arrows indicating that it can be extended indefinitely in both directions.]
+
+**Postulate 3**: A circle can be drawn with any centre and any radius.
+
+**Postulate 4**: All right angles are equal to one another.
+
+--- Similarity: 0.67980558675688 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ['Midpoint of a line segment', "Euclid's Axioms", "Euclid's Postulates", 'Theorems', 'Undefined terms in geometry'], 'page_summary': "This page covers problems related to Euclid's geometry, including proving geometric relationships and understanding the nature of axioms and postulates. It also summarizes key definitions, axioms, and postulates as defined by Euclid.", 'ingestion_mode': 'ai'} ---
+another.
+
+(7) Things which are halves of the same things are equal to one another.
+
+5.  Euclid's postulates were :
+
+**Postulate 1**: A straight line may be drawn from any one point to any other point.
+
+**Postulate 2**: A terminated line can be produced indefinitely.
+
+**Postulate 3**: A circle can be drawn with any centre and any radius.
+
+**Postulate 4**: All right angles are equal to one another.
+
+--- Similarity: 0.670695009462742 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ["Euclid's Postulates", 'Straight Lines', 'Unique Line', 'Line Segment', 'Circles', 'Right Angles', 'Axioms'], 'page_summary': "This page introduces Euclid's first five postulates, which serve as the foundation for Euclidean geometry. It discusses the implications of each postulate and states a relevant axiom.", 'ingestion_mode': 'ai'} ---
+ndicating that it can be extended indefinitely in both directions.]
+
+**Postulate 3**: A circle can be drawn with any centre and any radius.
+
+**Postulate 4**: All right angles are equal to one another.
+
+**Postulate 5**: If a straight line falling on two straight lines makes the interior angles on the same side of it taken together less than two right angles, then the two straight lines, if produced indefinitely, meet on that side on which the sum of angles is less than two right angles.
+
+--- Similarity: 0.662227756977122 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ['Theorem 5.1', 'Proof by contradiction', "Euclid's postulates", 'Definitions of geometric terms'], 'page_summary': 'This page presents Theorem 5.1, which states that two distinct lines cannot have more than one point in common and provides a proof. It also includes Exercise 5.1 with questions about true/false statements, definitions of geometric terms, and postulates.', 'ingestion_mode': 'ai'} ---
+Theorem 5.1: Two distinct lines cannot have more than one point in common.
+
+**Proof:** Here we are given two lines $l$ and $m$. We need to prove that they have only one point in common.
+
+For the time being, let us suppose that the two lines intersect in two distinct points, say P and Q. So, you have two lines passing through two distinct points P and Q. But this assumption clashes with the axiom that only one line can pass through two distinct points. So, the assumption that we started with, that two lines can pass through two distinct points is wrong.
+
+From this, what can we conclude? We are forced to conclude that two distinct lines cannot have more than one point in common.
+
+**EXERCISE 5.1**
+
+1. Which of the following statements are true and which are false? Give reasons for your answers.
+
+(i) Only one line can pass through a single point.
+
+(ii) There are an infinite number of lines which pass through two distinct points.
+
+--- Similarity: 0.660073708085935 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ["Euclid's Postulates", 'Line segment extension', 'Unique line through two points', 'Drawing circles', 'Right angles are equal'], 'page_summary': 'This page discusses the first five postulates of Euclidean geometry. It describes how these postulates define fundamental geometric concepts, like drawing lines between points, extending line segments, and the nature of right angles.', 'ingestion_mode': 'ai'} ---
+# యూక్లిడ్ జ్యామితి పరిచయం
+
+యూక్లిడ్ యొక్క 5 స్వీకృతాల గూర్చి చర్చిద్దాం. అవి:
+
+**స్వీకృతం -1**: ఏదైనా ఒక బిందువు నుండి వేరొక బిందువునకు ఒక సరళరేఖ గీయవచ్చు.
+
+రెండు వేర్వేరు బిందువుల గుండా కనీసం ఒక సరళరేఖ ప్రయాణించును అనే విషయాన్ని ఈ స్వీకృతం మనకు తెలుపుతుంది.
+కానీ ఒకటి కంటే ఎక్కువ రేఖలు ప్రయాణించలేవు అని కూడా ఇది తెలపటం లేదు. అయితే యూక్లిడ్ అధ్యయనంలో తరచుగా భావించిన “రెండు వేర్వేరు బిందువులను కలుపుతూపోయే. రేఖ ఏకైకం గా ఉంటుంది. ఈ ఫలితాన్ని మనం సామాన్యభావన రూపంలో క్రిందివిధంగా తెలుపవచ్చు.
+
+**సామాన్య భావన 5.1**: రెండు వేర్వేరు బిందువుల గుండా పోయేరేఖ ఏకైకంగా ఉంటుంది.
+
+P బిందువు గుండా పోయే ఎన్ని రేఖలు Q బిందువు గుండా కూడా పోతాయి? ఒకే ఒక్కటి, అది PQ రేఖ మాత్రమే.
+Q బిందువు గుండా పోయే ఎన్ని రేఖలు P బిందువు గుండా పోతాయి? ఒకే ఒక్కటి, అది PQ రేఖ మాత్రమే. ఈవిధంగా పైన తెల్పబడిన ప్రవచనం స్వయం నిర్దేశితమైంది మరియు సామాన్య భావనగా తీసుకోబడింది.
+
+[Diagram: A diagram showing multiple lines passing through two points P and Q.]
+
+**స్వీకృతం -2**: ఒక ఖండిత రేఖను నిరవధికంగా పొడిగించవచ్చు.
+
+--- Similarity: 0.655542481851319 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ["Euclid's definitions", 'Axioms and postulates', 'Points', 'Lines', 'Surfaces', 'Dimensions'], 'page_summary': "This page discusses Euclid's approach to geometry, including his definitions of fundamental concepts like points, lines, and surfaces. It also notes the challenges and complexities in rigorously defining these terms.", 'ingestion_mode': 'ai'} ---
+ss Euclid's approach to geometry and shall try to link it with the present day geometry.
+
+## 5.2 Euclid's Definitions, Axioms and Postulates
+
+[Diagram: Euclid (325 BCE - 265 BCE) Fig. 5.3, a portrait]
+
+The Greek mathematicians of Euclid's time thought of geometry as an abstract model of the world in which they lived. The notions of point, line, plane (or surface) and so on were derived from what was seen around them. From studies of the space and solids in the space around them, an abstract geometrical notion of a solid object was developed. A solid has shape, size, position, and can be moved from one place to another. Its boundaries are called **surfaces**. They separate one part of the space from another, and are said to have no thickness. The boundaries of the surfaces are **curves** or **straight lines**. These lines end in **points**.
+
+--- Similarity: 0.653984365092732 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ['Intersecting lines', 'Non-intersecting (parallel) lines', 'Linear pair of angles', 'Supplementary angles', 'Axiom related to linear pairs'], 'page_summary': 'The page introduces intersecting and non-intersecting lines and then delves into pairs of angles, particularly focusing on linear pairs and their relationship to a straight angle (180 degrees). It also highlights the axiom derived from the relationship between linear pairs of angles.', 'ingestion_mode': 'ai'} ---
+# 6.3 Intersecting Lines and Non-intersecting Lines
+
+Draw two different lines PQ and RS on a paper. You will see that you can draw them in two different ways as shown in Fig. 6.5 (i) and Fig. 6.5 (ii).
+
+[Diagram: Two diagrams are shown side-by-side. The first diagram (i) shows two lines PQ and RS intersecting. The second diagram (ii) shows two parallel lines PQ and RS.]
+
+Fig. 6.5 : Different ways of drawing two lines
+
+Recall the notion of a line, that it extends indefinitely in both directions. Lines PQ and RS in Fig. 6.5 (i) are intersecting lines and in Fig. 6.5 (ii) are parallel lines. Note that the lengths of the common perpendiculars at different points on these parallel lines is the same. This equal length is called the distance between two parallel lines.
+
+# 6.4 Pairs of Angles
+
+--- Similarity: 0.652236868627114 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ['Lines Parallel to the Same Line', 'Corresponding Angles Axiom', 'Transversal'], 'page_summary': 'This page explains that if two lines are parallel to the same line, then they are parallel to each other.  It also shows an example of how to solve a problem related to parallel lines and angles.', 'ingestion_mode': 'ai'} ---
+s which are parallel to the same line are parallel to each other.
+
+**Note:** The property above can be extended to more than two lines also.
+
+Now, let us solve some examples related to parallel lines.
+
+**Example 4:** In Fig. 6.19, if $PQ \parallel RS$, $\angle MXQ = 135^\circ$ and $\angle MYR = 40^\circ$, find $\angle XMY$.
+
+[Diagram: Fig. 6.19 shows lines PQ and RS. Line PQ has an angle labeled 135 degrees as MXQ. Line RS has an angle labeled 40 degrees as MYR.]
+
+[Diagram: Fig. 6.20 shows lines PQ and RS and a dotted line AB, parallel to PQ.]
+
+**Solution:** Here, we need to draw a line AB parallel to line PQ, through point M as shown in Fig. 6.20. Now, $AB \parallel PQ$ and $PQ \parallel RS$.
+
+--- Similarity: 0.651174254240879 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ['Lines parallel to the same line', 'Theorem 6.6', 'Corresponding Angles Postulate', 'Converse of the Corresponding Angles Postulate'], 'page_summary': 'This page explains that if two lines are parallel to the same line, then they are parallel to each other. It also includes an example problem demonstrating how to find the angle when parallel lines are involved.', 'ingestion_mode': 'ai'} ---
+are parallel to the same line are parallel to each other.
+
+**Note:** The property mentioned above can also be applied to more than two lines.
+
+Now, let's solve some examples related to parallel lines.
+
+**Example 4:** In Figure 6.19, $PQ \parallel RS, \angle MXQ = 135^\circ$ and $\angle MYR = 40^\circ$, then find $\angle XMY$.
+
+[Diagram: Figure 6.18 showing three lines l, m, and n intersected by transversal t, labeling angles 1, 2, and 3.]
+
+[Diagram: Figure 6.19 showing lines PQ and RS intersected by lines MX and MY, \angle MXQ = 135 degrees, \angle MYR = 40 degrees.]
+
+[Diagram: Figure 6.20 showing lines PQ and RS with line AB drawn parallel to PQ through point M, \angle MYR = 40 degrees, \angle MXQ = 135 degrees.]
+
+**Solution:** Here, in Figure 6.20, we need to draw a line AB parallel to line PQ through M.
+
+Now, $AB \parallel PQ$ and $PQ \parallel RS$.
+
+--- Similarity: 0.647622106134065 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ['Midpoint of a line segment', "Euclid's Axioms", "Euclid's Postulates", 'Theorems', 'Undefined terms in geometry'], 'page_summary': "This page covers problems related to Euclid's geometry, including proving geometric relationships and understanding the nature of axioms and postulates. It also summarizes key definitions, axioms, and postulates as defined by Euclid.", 'ingestion_mode': 'ai'} ---
+efinitions are not accepted by mathematicians. Therefore, these terms are now taken as undefined.
+
+2.  Axioms or postulates are the assumptions which are obvious universal truths. They are not proved.
+
+3.  Theorems are statements which are proved, using definitions, axioms, previously proved statements and deductive reasoning.
+
+4.  Some of Euclid's axioms were :
+
+(1) Things which are equal to the same thing are equal to one another.
+
+(2) If equals are added to equals, the wholes are equal.
+
+(3) If equals are subtracted from equals, the remainders are equal.
+
+(4) Things which coincide with one another are equal to one another.
+
+(5) The whole is greater than the part.
+
+(6) Things which are double of the same things are equal to one another.
+
+(7) Things which are halves of the same things are equal to one another.
+
+5.  Euclid's postulates were :
+
+**Postulate 1**: A straight line may be drawn from any one point to any other point.
+
+--- Similarity: 0.645880572587454 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ['Euclidean geometry', 'Axioms and postulates', 'Properties of points and lines', 'Geometric proofs'], 'page_summary': 'This page contains solutions and justifications for exercises related to geometry, focusing on concepts like postulates, axioms, and properties of points and lines. It includes proofs and explanations based on Euclidean geometry.', 'ingestion_mode': 'ai'} ---
+different situations - (i) says that given two points A and B, there is a point C lying on the line in between them; (ii) says that given A and B, you can take C not lying on the line through A and B.
+
+These 'postulates' do not follow from Euclid's postulates. However, they follow from Axiom 5.1.
+4.
+
+$\qquad AC = BC$
+
+So, $\qquad AC+AC=BC + AC$ (Equals are added to equals)
+
+i.e., $\qquad 2AC = AB \qquad$ (BC + AC coincides with AB)
+
+Therefore, $\qquad AC=\frac{1}{2} AB$
+5.  Make a temporary assumption that different points C and D are two mid-points of AB. Now, you show that points C and D are not two different points.
+6.
+
+$\qquad AC = BD$ (Given) (1)
+
+$\qquad AC=AB+BC$ (Point B lies between A and C) (2)
+
+$\qquad BD = BC+CD$ (Point C lies between B and D) (3)
+
+--- Similarity: 0.644372386209297 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ['Theorem 5.1', 'Proof by contradiction', "Euclid's postulates", 'Definitions of geometric terms'], 'page_summary': 'This page presents Theorem 5.1, which states that two distinct lines cannot have more than one point in common and provides a proof. It also includes Exercise 5.1 with questions about true/false statements, definitions of geometric terms, and postulates.', 'ingestion_mode': 'ai'} ---
+nts are true and which are false? Give reasons for your answers.
+
+(i) Only one line can pass through a single point.
+
+(ii) There are an infinite number of lines which pass through two distinct points.
+
+(iii) A terminated line can be produced indefinitely on both the sides.
+
+(iv) If two circles are equal, then their radii are equal.
+
+(v) In Fig. 5.9, if $AB = PQ$ and $PQ = XY$, then $AB = XY$.
+
+[Diagram: Figure 5.9 showing three line segments AB, PQ, and XY.  A is connected to B, P is connected to Q, and X is connected to Y. The segments are labeled such that $AB=PQ=XY$]
+
+Fig. 5.9
+
+2. Give a definition for each of the following terms. Are there other terms that need to be defined first? What are they, and how might you define them?
+
+(i) parallel lines
+
+(ii) perpendicular lines
+
+(iii) line segment
+
+(iv) radius of a circle
+
+(v) square
+
+3. Consider two 'postulates' given below:
+
+(i) Given any two distinct points A and B, there exists a third point C which is in between A and B.
+
+--- Similarity: 0.644006968202045 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ['Lines Parallel to the Same Line', 'Corresponding Angles Axiom', 'Transversal'], 'page_summary': 'This page explains that if two lines are parallel to the same line, then they are parallel to each other.  It also shows an example of how to solve a problem related to parallel lines and angles.', 'ingestion_mode': 'ai'} ---
+# 6.5 Lines Parallel to the Same Line
+
+If two lines are parallel to the same line, will they be parallel to each other? Let us check it. See Fig. 6.18 in which line $m \parallel$ line $l$ and line $n \parallel$ line $l$.
+
+Let us draw a line $t$ transversal for the lines, $l$, $m$ and $n$. It is given that line $m \parallel$ line $l$ and line $n \parallel$ line $l$.
+
+Therefore, $\angle 1 = \angle 2$ and $\angle 1 = \angle 3$
+
+(Corresponding angles axiom)
+
+So, $\angle 2 = \angle 3$ (Why?)
+
+But $\angle 2$ and $\angle 3$ are corresponding angles and they are equal.
+
+Therefore, you can say that
+
+Line $m \parallel$ Line $n$
+
+(Converse of corresponding angles axiom)
+
+This result can be stated in the form of the following theorem:
+
+**Theorem 6.6:** Lines which are parallel to the same line are parallel to each other.
+
+**Note:** The property above can be extended to more than two lines also.
+
+Now, let us solve some examples related to parallel lines.
+
+--- Similarity: 0.64128015431765 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ["Euclid's Postulates", 'Axioms', 'Consistency', 'Propositions/Theorems', 'Deductive Reasoning'], 'page_summary': "This page discusses Euclid's postulates and axioms, emphasizing the complexity of the fifth postulate and the concept of consistency in a system of axioms. It also introduces propositions/theorems and demonstrates how Euclid used axioms and postulates to prove results.", 'ingestion_mode': 'ai'} ---
+For example, the line PQ in Fig. 5.6 falls on lines AB and CD such that the sum of the interior angles 1 and 2 is less than 180° on the left side of PQ. Therefore, the lines AB and CD will eventually intersect on the left side of PQ.
+
+[Diagram: Fig. 5.6 shows two lines AB and CD intersected by a line PQ. Angles 1 and 2 are marked as interior angles on the left side of PQ.]
+
+A brief look at the five postulates brings to your notice that Postulate 5 is far more complex than any other postulate. On the other hand, Postulates 1 through 4 are so simple and obvious that these are taken as 'self-evident truths'. However, it is not possible to prove them. So, these statements are accepted without any proof (see Appendix 1). Because of its complexity, the fifth postulate will be given more attention in the next section.
+
+--- Similarity: 0.639885427803054 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ["Euclid's Axioms", "Euclid's Postulates", 'Construction of Equilateral Triangle', 'Properties of Circles', 'Geometric Proofs'], 'page_summary': "This page presents a solution related to Euclid's geometry, using Euclid's axioms and postulates to prove that an equilateral triangle can be constructed on any given line segment. It leverages the properties of circles and the axiom that things equal to the same thing are equal to one another.", 'ingestion_mode': 'ai'} ---
+Solution : In the figure given above, AC coincides with AB + BC.
+
+Also, Euclid's Axiom (4) says that things which coincide with one another are equal to one another. So, it can be deduced that
+
+$AB + BC = AC$
+
+Note that in this solution, it has been assumed that there is a unique line passing through two points.
+
+Example 2 : Prove that an equilateral triangle can be constructed on any given line segment.
+
+Solution : In the statement above, a line segment of any length is given, say AB [see Fig. 5.8(i)]
+
+[Diagram: Three subfigures (i), (ii), and (iii) showing the construction of an equilateral triangle. (i) shows a line segment AB. (ii) shows two arcs centered at A and B intersecting at point C above the line segment. (iii) shows the completed equilateral triangle ABC.]
+
+Fig. 5.8
+
+--- Similarity: 0.638544275134989 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ['Midpoint of a line segment', "Euclid's Axioms", "Euclid's Postulates", 'Theorems', 'Undefined terms in geometry'], 'page_summary': "This page covers problems related to Euclid's geometry, including proving geometric relationships and understanding the nature of axioms and postulates. It also summarizes key definitions, axioms, and postulates as defined by Euclid.", 'ingestion_mode': 'ai'} ---
+4. If a point C lies between two points A and B such that $AC = BC$, then prove that $AC = \frac{1}{2}AB$. Explain by drawing the figure.
+
+5. In Question 4, point C is called a mid-point of line segment AB. Prove that every line segment has one and only one mid-point.
+
+6. In Fig. 5.10, if $AC = BD$, then prove that $AB = CD$.
+
+[Diagram: A line segment with points A, B, C, and D in that order. A to B is marked, as is C to D. The caption says 'Fig. 5.10']
+
+7. Why is Axiom 5, in the list of Euclid's axioms, considered a 'universal truth'? (Note that the question is not about the fifth postulate.)
+
+## 5.3 Summary
+
+In this chapter, you have studied the following points:
+
+1.  Though Euclid defined a point, a line, and a plane, the definitions are not accepted by mathematicians. Therefore, these terms are now taken as undefined.
+
+2.  Axioms or postulates are the assumptions which are obvious universal truths. They are not proved.
+
+--- Similarity: 0.638336834118588 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ["Euclid's Postulates", 'Axioms', 'Consistency', 'Propositions/Theorems', 'Deductive Reasoning'], 'page_summary': "This page discusses Euclid's postulates and axioms, emphasizing the complexity of the fifth postulate and the concept of consistency in a system of axioms. It also introduces propositions/theorems and demonstrates how Euclid used axioms and postulates to prove results.", 'ingestion_mode': 'ai'} ---
+ossible to deduce from these axioms a statement that contradicts any axiom or previously proved statement. So, when any system of axioms is given, it needs to be ensured that the system is consistent.
+
+After Euclid stated his postulates and axioms, he used them to prove other results. Then using these results, he proved some more results by applying deductive reasoning. The statements that were proved are called **propositions** or **theorems**. Euclid deduced 465 propositions in a logical chain using his axioms, postulates, definitions and theorems proved earlier in the chain. In the next few chapters on geometry, you will be using these axioms to prove some theorems.
+
+Now, let us see in the following examples how Euclid used his axioms and postulates for proving some of the results:
+
+**Example 1**: If A, B and C are three points on a line, and B lies between A and C (see Fig. 5.7), then prove that $AB + BC = AC$.
+
+--- Similarity: 0.638032217977873 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ["Euclid's definitions", 'Axioms and postulates', 'Points', 'Lines', 'Surfaces', 'Dimensions'], 'page_summary': "This page discusses Euclid's approach to geometry, including his definitions of fundamental concepts like points, lines, and surfaces. It also notes the challenges and complexities in rigorously defining these terms.", 'ingestion_mode': 'ai'} ---
+called 'Elements'. He divided the 'Elements' into thirteen chapters, each called a book. These books influenced the whole world's understanding of geometry for generations to come.
+
+In this chapter, we shall discuss Euclid's approach to geometry and shall try to link it with the present day geometry.
+
+## 5.2 Euclid's Definitions, Axioms and Postulates
+
+[Diagram: Euclid (325 BCE - 265 BCE) Fig. 5.3, a portrait]
+
+--- Similarity: 0.637837746906419 | Metadata: {'board': 'BSE AP', 'class': None, 'school': None, 'subject': 'Maths', 'filename': '9_Maths_SEM-1_Textbook-1.pdf', 'semester': 'Semester 1', 'book_name': 'Maths Class 9 Semester 1 AI Ingest', 'key_concepts': ["Euclid's Postulates", 'Axioms', 'Consistency', 'Propositions/Theorems', 'Deductive Reasoning'], 'page_summary': "This page discusses Euclid's postulates and axioms, emphasizing the complexity of the fifth postulate and the concept of consistency in a system of axioms. It also introduces propositions/theorems and demonstrates how Euclid used axioms and postulates to prove results.", 'ingestion_mode': 'ai'} ---
+it is not possible to prove them. So, these statements are accepted without any proof (see Appendix 1). Because of its complexity, the fifth postulate will be given more attention in the next section.
+
+Now-a-days, 'postulates' and 'axioms' are terms that are used interchangeably and in the same sense. 'Postulate' is actually a verb. When we say "let us postulate", we mean, "let us make some statement based on the observed phenomenon in the Universe". Its truth/validity is checked afterwards. If it is true, then it is accepted as a 'Postulate'.
+
+A system of axioms is called **consistent** (see Appendix 1), if it is impossible to deduce from these axioms a statement that contradicts any axiom or previously proved statement. So, when any system of axioms is given, it needs to be ensured that the system is consistent.

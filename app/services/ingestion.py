@@ -122,6 +122,8 @@ class IngestionService:
             
             prompt = """
             Transcribe this textbook page into high-quality Markdown. 
+            - IMPORTANT: If the page is bilingual (e.g., Telugu and English), transcribe BOTH languages accurately.
+            - PRIORITIZE ENGLISH: Ensure technical terms and definitions are clearly transcribed in English.
             - Use LaTeX for all mathematical formulas (e.g., $E=mc^2$).
             - Describe any diagrams or complex visuals in brackets [Diagram: ...].
             - Preserve table structures.
