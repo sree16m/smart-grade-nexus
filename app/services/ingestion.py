@@ -10,6 +10,7 @@ import io
 from PIL import Image
 import json
 import time
+from google.api_core.exceptions import ResourceExhausted
 
 # Initialize Clients
 genai.configure(api_key=settings.GOOGLE_API_KEY)
@@ -190,13 +191,36 @@ class IngestionService:
             """
 
             try:
-                def _gen():
-                    return model.generate_content(
-                        [prompt, {"mime_type": "image/jpeg", "data": img_bytes}],
-                        generation_config={"response_mime_type": "application/json"}
-                    )
+                # 2. Generate with Retry and Backoff
+                max_retries = 3
+                retry_delay = 2
+                response = None
                 
-                response = await asyncio.to_thread(_gen)
+                for attempt in range(max_retries):
+                    try:
+                        def _gen():
+                            return model.generate_content(
+                                [prompt, {"mime_type": "image/jpeg", "data": img_bytes}],
+                                generation_config={"response_mime_type": "application/json"}
+                            )
+                        response = await asyncio.to_thread(_gen)
+                        break # Success
+                    except ResourceExhausted:
+                        if attempt == max_retries - 1:
+                            raise
+                        sleep_time = retry_delay * (2 ** attempt)
+                        print(f"Gemini Ingestion 429 Limit hit (Page {i+1}). Retrying in {sleep_time}s...")
+                        await asyncio.sleep(sleep_time)
+                    except Exception as e:
+                        # For other errors, we might want to fail the page or retry
+                        if attempt == max_retries - 1:
+                            raise
+                        print(f"Retrying page {i+1} due to error: {e}")
+                        await asyncio.sleep(retry_delay)
+
+                if not response:
+                    raise Exception(f"AI OCR failed to return a response for page {i+1}")
+
                 res_data = self._safe_json_loads(response.text)
                 
                 # Fallback if safe_loads returns empty
@@ -212,6 +236,10 @@ class IngestionService:
                 if book_name:
                     job_registry.update_progress(book_name, i + 1)
                 yield res_data
+                
+                # Small pause to avoid hitting rate limits too aggressively
+                await asyncio.sleep(0.5) 
+
             except Exception as e:
                 print(f"AI OCR failed for page {i+1}: {e}")
                 # Fallback to empty if AI fails for one page to keep going
