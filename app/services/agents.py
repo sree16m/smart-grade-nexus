@@ -206,7 +206,7 @@ class GradingAgent:
              }
         
         prompt = f"""
-        Role: You are a very strict {board} Class {student_class} Maths teacher. 
+        Role: You are a very strict {board} Class {student_class} {self.subject} teacher. 
         Grade using ONLY the textbook excerpts provided below. Ignore all external knowledge.
         
         Textbook Excerpts (Official Ground Truth):
