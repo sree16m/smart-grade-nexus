@@ -50,8 +50,9 @@ class IngestionService:
         
         if use_ocr:
             reason = "too short" if is_too_short else (f"low English density ({density:.1%})" if is_low_density else f"high garbage ratio ({garbage_ratio:.1%})")
-            print(f"Extraction quality is low ({reason}). Using page-by-page OCR...")
+            print(f"Extraction quality is low ({reason}). Starting page-by-page OCR for {len(doc)} pages...")
             for i in range(len(doc)):
+                print(f"OCR: Processing page {i+1}/{len(doc)}...")
                 def _ocr_page(page_num):
                     page = doc.load_page(page_num)
                     pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
@@ -62,7 +63,10 @@ class IngestionService:
                 page_text = await asyncio.to_thread(_ocr_page, i)
                 yield page_text
         else:
-            for page in doc:
+            print(f"Extraction quality is Good. Streaming {len(doc)} pages...")
+            for i, page in enumerate(doc):
+                if (i+1) % 20 == 0:
+                    print(f"Streaming: page {i+1}/{len(doc)}...")
                 yield page.get_text()
         
         doc.close()
@@ -142,7 +146,7 @@ class IngestionService:
             
         return await asyncio.to_thread(_embed)
 
-    async def process_document(self, file_content: bytes, metadata: Dict[str, Any]):
+    async def process_document(self, file_content: bytes, metadata: Dict[str, Any], background_tasks: Any):
         """Main Orchestrator (Background): Parse -> Chunk -> Embed -> Store Incrementally."""
         book_name = metadata.get("book_name")
 
@@ -165,20 +169,25 @@ class IngestionService:
                         print(f"Processing batch of {batch_page_count} pages for {book_name}...")
                         chunks_added = await self._process_batch(batch_text, metadata)
                         total_chunks += chunks_added
+                        print(f"Successfully added {chunks_added} chunks. Total so far: {total_chunks}")
                         batch_text = ""
                         batch_page_count = 0
                 
                 # Process remaining pages
                 if batch_text:
                     print(f"Processing final batch for {book_name}...")
-                    total_chunks += await self._process_batch(batch_text, metadata)
+                    chunks_added = await self._process_batch(batch_text, metadata)
+                    total_chunks += chunks_added
+                    print(f"Successfully added {chunks_added} chunks.")
                 
-                print(f"Ingestion complete for '{book_name}'. Total chunks stored: {total_chunks}")
+                print(f"INGESTION COMPLETE for '{book_name}'. Total stored: {total_chunks} chunks.")
             except Exception as e:
+                import traceback
+                traceback.print_exc()
                 print(f"CRITICAL ERROR during ingestion for {book_name}: {str(e)}")
 
-        # Start background task
-        asyncio.create_task(_run_ingestion())
+        # Start background task using FastAPI's BackgroundTasks
+        background_tasks.add_task(_run_ingestion)
         
         return {
             "status": "processing", 

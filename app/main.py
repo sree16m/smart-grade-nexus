@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -109,6 +109,7 @@ async def delete_book(book_name: str):
 
 @app.post(f"{settings.API_V1_STR}/knowledge/ingest")
 async def ingest_knowledge(
+    background_tasks: BackgroundTasks,
     subject: Optional[str] = Form(None),
     book_name: Optional[str] = Form(None),
     board: Optional[str] = Form(None),
@@ -130,7 +131,7 @@ async def ingest_knowledge(
             "semester": semester
         }
         
-        result = await ingestion_service.process_document(content, metadata)
+        result = await ingestion_service.process_document(content, metadata, background_tasks)
         return {"status": "success", "data": result}
     except Exception as e:
         import traceback
