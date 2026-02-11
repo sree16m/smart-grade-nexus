@@ -8,6 +8,7 @@ import re
 import pytesseract
 import io
 from PIL import Image
+import json
 
 # Initialize Clients
 genai.configure(api_key=settings.GOOGLE_API_KEY)
@@ -69,6 +70,60 @@ class IngestionService:
                     print(f"Streaming: page {i+1}/{len(doc)}...")
                 yield page.get_text()
         
+    async def parse_pdf_ai(self, file_content: bytes) -> AsyncGenerator[Dict[str, Any], None]:
+        """Extracts text and enriched metadata from a PDF file using Gemini Vision."""
+        def _get_doc():
+            return fitz.open(stream=file_content, filetype="pdf")
+            
+        doc = await asyncio.to_thread(_get_doc)
+        print(f"AI Ingestion: Starting Gemini Vision transcription for {len(doc)} pages...")
+
+        model = genai.GenerativeModel("gemini-2.0-flash")
+        
+        for i in range(len(doc)):
+            print(f"AI OCR: Processing page {i+1}/{len(doc)}...")
+            
+            def _prep_page():
+                page = doc.load_page(i)
+                pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG")
+                return buf.getvalue()
+
+            img_bytes = await asyncio.to_thread(_prep_page)
+            
+            prompt = """
+            Transcribe this textbook page into high-quality Markdown. 
+            - Use LaTeX for all mathematical formulas (e.g., $E=mc^2$).
+            - Describe any diagrams or complex visuals in brackets [Diagram: ...].
+            - Preserve table structures.
+            - Do not include page numbers or headers/footers.
+            
+            Also, provide a brief summary and a list of key concepts found on this page.
+            Return the result in JSON format:
+            {
+              "content": "the transcribed markdown text",
+              "page_summary": "1-2 sentence overview",
+              "key_concepts": ["concept1", "concept2"]
+            }
+            """
+
+            try:
+                def _gen():
+                    return model.generate_content(
+                        [prompt, {"mime_type": "image/jpeg", "data": img_bytes}],
+                        generation_config={"response_mime_type": "application/json"}
+                    )
+                
+                response = await asyncio.to_thread(_gen)
+                res_data = json.loads(response.text)
+                yield res_data
+            except Exception as e:
+                print(f"AI OCR failed for page {i+1}: {e}")
+                # Fallback to empty if AI fails for one page to keep going
+                yield {"content": f"[AI Error on Page {i+1}]", "page_summary": "", "key_concepts": []}
+
         doc.close()
 
     def chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
@@ -149,6 +204,7 @@ class IngestionService:
     async def process_document(self, file_content: bytes, metadata: Dict[str, Any], background_tasks: Any):
         """Main Orchestrator (Background): Parse -> Chunk -> Embed -> Store Incrementally."""
         book_name = metadata.get("book_name")
+        ingestion_mode = metadata.get("ingestion_mode", "standard")
 
         async def _run_ingestion():
             try:
@@ -161,24 +217,39 @@ class IngestionService:
                 batch_page_count = 0
                 total_chunks = 0
                 
-                async for page_text in self.parse_pdf(file_content):
-                    batch_text += page_text + "\n"
-                    batch_page_count += 1
+                if ingestion_mode == "ai":
+                    # AI Mode: Enriched per-page processing
+                    async for page_data in self.parse_pdf_ai(file_content):
+                        # For AI mode, we process each page immediately to preserve enriched metadata
+                        print(f"AI Ingestion: Processing enriched page {total_chunks+1} for {book_name}...")
+                        # Merge page-level metadata into chunk metadata
+                        page_metadata = metadata.copy()
+                        page_metadata.update({
+                            "page_summary": page_data.get("page_summary"),
+                            "key_concepts": page_data.get("key_concepts")
+                        })
+                        chunks_added = await self._process_batch(page_data["content"], page_metadata)
+                        total_chunks += chunks_added
+                else:
+                    # Standard Mode (Tesseract / Extraction)
+                    async for page_text in self.parse_pdf(file_content):
+                        batch_text += page_text + "\n"
+                        batch_page_count += 1
+                        
+                        if batch_page_count >= 5: # Process every 5 pages
+                            print(f"Processing batch of {batch_page_count} pages for {book_name}...")
+                            chunks_added = await self._process_batch(batch_text, metadata)
+                            total_chunks += chunks_added
+                            print(f"Successfully added {chunks_added} chunks. Total so far: {total_chunks}")
+                            batch_text = ""
+                            batch_page_count = 0
                     
-                    if batch_page_count >= 5: # Process every 5 pages
-                        print(f"Processing batch of {batch_page_count} pages for {book_name}...")
+                    # Process remaining pages
+                    if batch_text:
+                        print(f"Processing final batch for {book_name}...")
                         chunks_added = await self._process_batch(batch_text, metadata)
                         total_chunks += chunks_added
-                        print(f"Successfully added {chunks_added} chunks. Total so far: {total_chunks}")
-                        batch_text = ""
-                        batch_page_count = 0
-                
-                # Process remaining pages
-                if batch_text:
-                    print(f"Processing final batch for {book_name}...")
-                    chunks_added = await self._process_batch(batch_text, metadata)
-                    total_chunks += chunks_added
-                    print(f"Successfully added {chunks_added} chunks.")
+                        print(f"Successfully added {chunks_added} chunks.")
                 
                 print(f"INGESTION COMPLETE for '{book_name}'. Total stored: {total_chunks} chunks.")
             except Exception as e:
@@ -191,7 +262,7 @@ class IngestionService:
         
         return {
             "status": "processing", 
-            "message": f"Ingestion started in background for '{book_name}'. Progress will appear in Supabase shortly."
+            "message": f"Ingestion ({ingestion_mode} mode) started in background for '{book_name}'."
         }
 
     async def _process_batch(self, text: str, metadata: Dict[str, Any], retries: int = 3) -> int:

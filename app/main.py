@@ -116,6 +116,7 @@ async def ingest_knowledge(
     school: Optional[str] = Form(None),
     student_class: Optional[str] = Form(None, alias="class"),
     semester: Optional[str] = Form(None, alias="semester"),
+    ingestion_mode: str = Form("standard"),
     file: UploadFile = File(...)
 ):
     """Parses PDF and stores embeddings in Supabase."""
@@ -128,7 +129,8 @@ async def ingest_knowledge(
             "board": board,
             "school": school,
             "class": student_class,
-            "semester": semester
+            "semester": semester,
+            "ingestion_mode": ingestion_mode
         }
         
         result = await ingestion_service.process_document(content, metadata, background_tasks)

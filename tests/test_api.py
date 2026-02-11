@@ -104,6 +104,22 @@ def test_ingest_knowledge(mock_gemini, mock_supabase):
     assert res_json["data"]["status"] == "processing"
     assert "started" in res_json["data"]["message"]
 
+def test_ingest_knowledge_ai(mock_gemini, mock_supabase):
+    """Test AI-powered ingestion mode."""
+    files = {"file": ("test.pdf", b"dummy content", "application/pdf")}
+    data = {
+        "subject": "Math",
+        "book_name": "Geometry AI",
+        "ingestion_mode": "ai"
+    }
+    response = client.post("/api/v1/knowledge/ingest", data=data, files=files)
+    
+    assert response.status_code == 200
+    res_json = response.json()
+    assert res_json["status"] == "success"
+    assert "ai mode" in res_json["data"]["message"].lower()
+    assert res_json["data"]["status"] == "processing"
+
 def test_ingest_knowledge_defaults(mock_gemini, mock_supabase):
     """Test that ingestion works even when ALL optional fields (including subject/book) are missing."""
     files = {"file": ("test.pdf", b"dummy content", "application/pdf")}

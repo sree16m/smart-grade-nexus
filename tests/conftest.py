@@ -14,7 +14,19 @@ def mock_gemini(monkeypatch):
 
     mock_generate = MagicMock()
     mock_response = MagicMock()
-    mock_response.text = '{"topic_path": "Physics > Mechanics", "confidence": 0.99, "score": 5.0, "feedback": "Good job", "citation": "Page 10"}'
+    # A "God JSON" that satisfies both AI Ingestion and Grading/Topic agents
+    mock_response.text = """
+    {
+      "content": "transcribed markdown text",
+      "page_summary": "1-2 sentence overview",
+      "key_concepts": ["concept1", "concept2"],
+      "topic_path": "Physics > Mechanics", 
+      "confidence": 0.99, 
+      "score": 5.0, 
+      "feedback": "Good job", 
+      "citation": "Page 10"
+    }
+    """
     mock_generate.return_value = mock_response
     
     # Mock the GenerativeModel class
