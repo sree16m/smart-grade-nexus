@@ -59,13 +59,34 @@ async def search_knowledge_base(query: str, subject: str, limit: int = 3) -> str
             }
         ).execute()
 
-    response = await asyncio.to_thread(_search, subject)
+    # Normalize/Map common subject variations
+    subject_map = {
+        "mathematics": ["Maths", "Math", "Mathematics"],
+        "maths": ["Mathematics", "Math", "Maths"],
+        "math": ["Mathematics", "Maths", "Math"],
+        "physics": ["Physics", "Physic"],
+        "biology": ["Biology", "Bio"],
+        "chemistry": ["Chemistry", "Chem"]
+    }
     
-    # Retry logic: Handle "Physic" vs "Physics" mismatch
-    if not response.data and subject == "Physics":
-        response = await asyncio.to_thread(_search, "Physic")
+    search_subjects = [subject]
+    # Add variations if they exist in the map (case-insensitive)
+    normalized_key = subject.lower()
+    if normalized_key in subject_map:
+        for variation in subject_map[normalized_key]:
+            if variation.lower() != normalized_key:
+                search_subjects.append(variation)
+
+    results = []
+    for s in search_subjects:
+        response = await asyncio.to_thread(_search, s)
+        if response.data:
+            results.extend(response.data)
+            # If we found enough semantic matches, we can stop
+            if len(results) >= 5:
+                break
         
-    vector_results = response.data if response.data else []
+    vector_results = results
     
     # 2b. Keyword Search (Supabase/Postgres Full Text Search)
     # We assume a 'keyword_search' RPC exists or we use direct filter.

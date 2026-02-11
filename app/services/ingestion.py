@@ -24,21 +24,32 @@ class IngestionService:
             
         doc = await asyncio.to_thread(_get_doc)
         
-        # Heuristic to decide if we need OCR: Check first 3 pages
+        # Heuristic to decide if we need OCR: Sample start, middle, end
+        sample_indices = set([0, len(doc)//2, len(doc)-1]) if len(doc) > 0 else set()
         sample_text = ""
-        for i in range(min(3, len(doc))):
-            sample_text += doc[i].get_text()
+        for i in sorted(list(sample_indices)):
+             if i < len(doc):
+                sample_text += doc[i].get_text()
         
         text_stripped = sample_text.strip()
-        is_too_short = len(text_stripped) < 50
-        english_chars = len(re.findall(r'[a-zA-Z]', text_stripped))
-        density = english_chars / len(text_stripped) if len(text_stripped) > 0 else 0
-        is_low_density = len(text_stripped) > 0 and density < 0.3
         
-        use_ocr = is_too_short or is_low_density
+        # 1. Check if too short
+        is_too_short = len(text_stripped) < 50
+        
+        # 2. Check for "Garbage" or Non-English density
+        english_chars = len(re.findall(r'[a-zA-Z]', text_stripped))
+        garbage_chars = text_stripped.count('\ufffd') # Replacement character 
+        
+        density = english_chars / len(text_stripped) if len(text_stripped) > 0 else 0
+        garbage_ratio = garbage_chars / len(text_stripped) if len(text_stripped) > 0 else 0
+        
+        is_low_density = len(text_stripped) > 0 and density < 0.3
+        is_high_garbage = garbage_ratio > 0.05 # More than 5% garbage characters
+        
+        use_ocr = is_too_short or is_low_density or is_high_garbage
         
         if use_ocr:
-            reason = "too short" if is_too_short else f"low English density ({density:.1%})"
+            reason = "too short" if is_too_short else (f"low English density ({density:.1%})" if is_low_density else f"high garbage ratio ({garbage_ratio:.1%})")
             print(f"Extraction quality is low ({reason}). Using page-by-page OCR...")
             for i in range(len(doc)):
                 def _ocr_page(page_num):
