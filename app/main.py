@@ -199,10 +199,12 @@ async def evaluate_answer(request_list: List[AnswerSheet]):
             max_marks = r.question_context.max_marks
             
             # Grade it
+            student_class = str(sheet.exam_details.class_level) if sheet.exam_details.class_level else "9"
             grade_result = await agent.evaluate(
                 question=q_text,
                 answer=student_ans,
-                max_marks=max_marks
+                max_marks=max_marks,
+                student_class=student_class
             )
             
             # Append ID info to result
@@ -262,10 +264,12 @@ async def analyze_full_sheet(request_list: List[AnswerSheet]) -> List[AnswerShee
                 student_ans += f" [Diagram: {r.student_answer.diagram_description}]"
             
             # Call Grading Agent
+            student_class = str(sheet.exam_details.class_level) if sheet.exam_details.class_level else "9"
             grade_result = await grading_agent.evaluate(
                 question=q_text,
                 answer=student_ans,
-                max_marks=r.question_context.max_marks or 1
+                max_marks=r.question_context.max_marks or 1,
+                student_class=student_class
             )
             
             # Handle List vs Dict response from AI

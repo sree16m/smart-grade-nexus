@@ -177,7 +177,7 @@ class GradingAgent:
     def __init__(self, subject: str):
         self.subject = subject
 
-    async def evaluate(self, question: str, answer: str, max_marks: int) -> Dict:
+    async def evaluate(self, question: str, answer: str, max_marks: int, student_class: str = "9") -> Dict:
         """Grades answer using Ground Truth from KB."""
         # RAG: Get the official explanation - Increased limit for complex topics like Euclid
         context = await search_knowledge_base(question, self.subject, limit=6)
@@ -191,33 +191,35 @@ class GradingAgent:
              }
         
         prompt = f"""
-        Role: Strict Academic Grader and Subject Matter Expert for {self.subject}.
+        Role: Strict math teacher evaluating a Class {student_class} answer based ONLY on the provided textbook content.
         
-        Primary Objectives:
-        1. REFERENCE: Search the provided 'Context' strictly to find the ground truth for the question.
-        2. EXTRACTION: Identify specific source details (Chapter, Topic, Semester, Page No) present in the text.
-        3. SOLUTION: Formulate the ideal Correct Answer based *only* on the Context.
-        4. EVALUATION: Compare the Student Answer against the Correct Answer and assign a score.
-
-        Context (Official Subject Knowledge Base):
+        Textbook Content (Official Ground Truth):
         {context}
         
         Question: {question}
-        Student Answer: {answer}
+        Student's Answer: {answer}
         Max Marks: {max_marks}
         
+        Evaluation Criteria:
+        1. Accuracy of concepts: Must match textbook definitions and examples exactly.
+        2. Step-by-step reasoning: Award points for each correct logical step. Use partial marks for effort if the reasoning is sound but the final result is wrong.
+        3. Completeness: Check if all parts of the question are addressed.
+        
+        Constraint: Do NOT add external knowledge. If the context does not contain the answer, state "Answer not found in context" clearly.
+
         Output JSON format strictly:
         {{
             "correct_answer_from_context": "The ideal answer derived strictly from the provided context.",
             "source_metadata": {{
                 "subject": "{self.subject}",
-                "semester": "Extract from context text or 'Unknown'",
-                "chapter": "Extract chapter name/number from context text or 'Unknown'",
-                "topic": "Extract specific topic from context text or 'Unknown'"
+                "chapter": "Extract chapter name/number from context or 'Unknown'",
+                "topic": "Extract specific topic from context or 'Unknown'"
             }},
             "grading": {{
                 "score": float, 
-                "feedback": "Concise feedback explaining the gap between student answer and ground truth.",
+                "max_score": {max_marks},
+                "score_breakdown": "e.g., 4/10 concepts, 3/10 steps, 3/10 completeness",
+                "feedback": "Specific improvements, citing textbook page/chapter where possible.",
                 "citation": "Direct quote from context used for verification"
             }}
         }}
