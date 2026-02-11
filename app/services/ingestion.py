@@ -130,10 +130,11 @@ class IngestionService:
             - Do not include page numbers or headers/footers.
             
             Identify the structural context:
+            - is_instructional_content: Set to false if the page is "Front Matter" (Foreword, Committee lists, National Anthem, Copyright, Translators, Preamble, Acknowledgements, etc.). Set to true if it contains actual educational lessons, theory, or exercises.
             - chapter_number: e.g., "5"
             - chapter_title: e.g., "Introduction to Euclid's Geometry"
             - subtopic: The specific section heading on this page if any.
-            - primary_language: "en" or "te" (dominant language for content).
+            - lang: "en" or "te" (dominant language for content).
 
             Also, provide a brief summary and a list of key concepts found on this page.
             Return the result in JSON format:
@@ -141,6 +142,7 @@ class IngestionService:
               "content": "the transcribed markdown text",
               "page_summary": "1-2 sentence overview",
               "key_concepts": ["concept1", "concept2"],
+              "is_instructional_content": boolean,
               "structural_metadata": {
                 "chapter_number": "string",
                 "chapter_title": "string",
@@ -272,8 +274,15 @@ class IngestionService:
                 
                 if ingestion_mode == "ai":
                     # AI Mode: Enriched per-page processing
+                    page_idx = 0
                     async for page_data in self.parse_pdf_ai(file_content, book_name):
                         if job_registry.is_cancelled(book_name): break
+                        page_idx += 1
+
+                        # Skip if it's Front Matter (Committee lists, forewords, etc.)
+                        if not page_data.get("is_instructional_content", True):
+                            print(f"Ingestion: Skipping non-instructional page {page_idx} (Front Matter)")
+                            continue
 
                         print(f"AI Ingestion: Processing enriched page {total_chunks+1} for {book_name}...")
                         # Merge page-level metadata into chunk metadata
@@ -286,7 +295,8 @@ class IngestionService:
                             "chapter": struct_meta.get("chapter_number"),
                             "chapter_title": struct_meta.get("chapter_title"),
                             "subtopic": struct_meta.get("subtopic"),
-                            "lang": struct_meta.get("lang")
+                            "lang": struct_meta.get("lang"),
+                            "is_content": True
                         })
                         chunks_added = await self._process_batch(page_data["content"], page_metadata)
                         total_chunks += chunks_added
