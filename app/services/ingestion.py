@@ -204,7 +204,7 @@ class IngestionService:
     async def process_document(self, file_content: bytes, metadata: Dict[str, Any], background_tasks: Any):
         """Main Orchestrator (Background): Parse -> Chunk -> Embed -> Store Incrementally."""
         book_name = metadata.get("book_name")
-        ingestion_mode = metadata.get("ingestion_mode", "standard")
+        ingestion_mode = metadata.get("ingestion_mode", "ai")
 
         async def _run_ingestion():
             try:

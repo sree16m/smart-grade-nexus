@@ -116,7 +116,7 @@ async def ingest_knowledge(
     school: Optional[str] = Form(None),
     student_class: Optional[str] = Form(None, alias="class"),
     semester: Optional[str] = Form(None, alias="semester"),
-    ingestion_mode: str = Form("standard"),
+    ingestion_mode: str = Form("ai"),
     file: UploadFile = File(...)
 ):
     """Parses PDF and stores embeddings in Supabase."""
