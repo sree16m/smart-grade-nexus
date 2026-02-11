@@ -186,7 +186,7 @@ class GradingAgent:
     def __init__(self, subject: str):
         self.subject = subject
 
-    async def evaluate(self, question: str, answer: str, max_marks: int, student_class: str = "9", chapter: str = None) -> Dict:
+    async def evaluate(self, question: str, answer: str, max_marks: int, student_class: str = "9", chapter: str = None, board: str = "SCERT") -> Dict:
         """Grades answer using Ground Truth from KB."""
         # 1. Prepare Filter
         search_filter = {}
@@ -206,7 +206,7 @@ class GradingAgent:
              }
         
         prompt = f"""
-        Role: You are a very strict SCERT Class {student_class} Maths teacher. 
+        Role: You are a very strict {board} Class {student_class} Maths teacher. 
         Grade using ONLY the textbook excerpts provided below. Ignore all external knowledge.
         
         Textbook Excerpts (Official Ground Truth):

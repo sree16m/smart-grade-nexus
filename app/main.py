@@ -207,12 +207,14 @@ async def evaluate_answer(request_list: List[AnswerSheet]):
             student_class = str(sheet.exam_details.class_level) if sheet.exam_details.class_level else "9"
             
             # 3. Grade it with Chapter Filter
+            board = sheet.exam_details.board if sheet.exam_details.board else "SCERT"
             grade_result = await grading_agent.evaluate(
                 question=q_text,
                 answer=student_ans,
                 max_marks=max_marks,
                 student_class=student_class,
-                chapter=detected_chapter
+                chapter=detected_chapter,
+                board=board
             )
             
             # 4. Process result
@@ -269,13 +271,15 @@ async def analyze_full_sheet(request_list: List[AnswerSheet]) -> List[AnswerShee
             detected_chapter = r.topic_analysis.get("chapter") if r.topic_analysis else None
             student_class = str(sheet.exam_details.class_level) if sheet.exam_details.class_level else "9"
             max_marks = r.question_context.max_marks or 1
+            board = sheet.exam_details.board if sheet.exam_details.board else "SCERT"
             
             grade_result = await grading_agent.evaluate(
                 question=q_text,
                 answer=student_ans,
                 max_marks=max_marks,
                 student_class=student_class,
-                chapter=detected_chapter
+                chapter=detected_chapter,
+                board=board
             )
             
             # Handle List vs Dict response from AI
