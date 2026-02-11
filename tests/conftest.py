@@ -63,13 +63,25 @@ def mock_fitz(monkeypatch):
     # Return a long string to avoid triggering OCR fallback (> 50 chars)
     mock_page.get_text.return_value = "This is a long mock page text content to ensure that standard tests do not trigger the OCR fallback mechanism unnecessarily."
     mock_doc.__iter__.return_value = [mock_page]
+    mock_doc.__len__.return_value = 1
+    mock_doc.__getitem__.return_value = mock_page
+    mock_doc.load_page.return_value = mock_page
+    
+    # Context manager support
+    mock_doc.__enter__.return_value = mock_doc
+    
+    mock_pix = MagicMock()
+    mock_pix.width = 100
+    mock_pix.height = 100
+    mock_pix.samples = b'\xff' * (100 * 100 * 3) # White RGB image
+    mock_page.get_pixmap.return_value = mock_pix
     
     # Mock context manager
     mock_open = MagicMock()
     mock_open.return_value = mock_doc
     
     import app.services.ingestion
-    monkeypatch.setattr(app.services.ingestion, "fitz", MagicMock(open=mock_open))
+    monkeypatch.setattr(app.services.ingestion, "fitz", MagicMock(open=mock_open, Matrix=MagicMock()))
 
 @pytest.fixture(autouse=True)
 def mock_ocr(monkeypatch):

@@ -9,27 +9,31 @@ import pytesseract
 import io
 from PIL import Image
 import json
+import time
 
 # Initialize Clients
 genai.configure(api_key=settings.GOOGLE_API_KEY)
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
+from app.services.job_registry import job_registry
+
 class IngestionService:
     def __init__(self):
         self.embedding_model = "models/gemini-embedding-001"
 
-    async def parse_pdf(self, file_content: bytes) -> AsyncGenerator[str, None]:
+    async def parse_pdf(self, file_content: bytes, book_name: str = None) -> AsyncGenerator[str, None]:
         """Extracts text from a PDF file as a stream of pages with OCR fallback."""
         def _get_doc():
             return fitz.open(stream=file_content, filetype="pdf")
             
         doc = await asyncio.to_thread(_get_doc)
+        total_pages = len(doc)
         
         # Heuristic to decide if we need OCR: Sample start, middle, end
-        sample_indices = set([0, len(doc)//2, len(doc)-1]) if len(doc) > 0 else set()
+        sample_indices = set([0, total_pages//2, total_pages-1]) if total_pages > 0 else set()
         sample_text = ""
         for i in sorted(list(sample_indices)):
-             if i < len(doc):
+             if i < total_pages:
                 sample_text += doc[i].get_text()
         
         text_stripped = sample_text.strip()
@@ -51,9 +55,14 @@ class IngestionService:
         
         if use_ocr:
             reason = "too short" if is_too_short else (f"low English density ({density:.1%})" if is_low_density else f"high garbage ratio ({garbage_ratio:.1%})")
-            print(f"Extraction quality is low ({reason}). Starting page-by-page OCR for {len(doc)} pages...")
-            for i in range(len(doc)):
-                print(f"OCR: Processing page {i+1}/{len(doc)}...")
+            print(f"Extraction quality is low ({reason}). Starting page-by-page OCR for {total_pages} pages...")
+            for i in range(total_pages):
+                # Check for cancellation
+                if book_name and job_registry.is_cancelled(book_name):
+                    print(f"Ingestion CANCELLED for {book_name}")
+                    break
+
+                print(f"OCR: Processing page {i+1}/{total_pages}...")
                 def _ocr_page(page_num):
                     page = doc.load_page(page_num)
                     pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
@@ -62,26 +71,44 @@ class IngestionService:
                     return text
                 
                 page_text = await asyncio.to_thread(_ocr_page, i)
+                if book_name:
+                    job_registry.update_progress(book_name, i + 1)
                 yield page_text
         else:
-            print(f"Extraction quality is Good. Streaming {len(doc)} pages...")
+            print(f"Extraction quality is Good. Streaming {total_pages} pages...")
             for i, page in enumerate(doc):
+                # Check for cancellation
+                if book_name and job_registry.is_cancelled(book_name):
+                    print(f"Ingestion CANCELLED for {book_name}")
+                    break
+
                 if (i+1) % 20 == 0:
-                    print(f"Streaming: page {i+1}/{len(doc)}...")
+                    print(f"Streaming: page {i+1}/{total_pages}...")
+                
+                if book_name:
+                    job_registry.update_progress(book_name, i + 1)
                 yield page.get_text()
         
-    async def parse_pdf_ai(self, file_content: bytes) -> AsyncGenerator[Dict[str, Any], None]:
+        doc.close()
+
+    async def parse_pdf_ai(self, file_content: bytes, book_name: str = None) -> AsyncGenerator[Dict[str, Any], None]:
         """Extracts text and enriched metadata from a PDF file using Gemini Vision."""
         def _get_doc():
             return fitz.open(stream=file_content, filetype="pdf")
             
         doc = await asyncio.to_thread(_get_doc)
-        print(f"AI Ingestion: Starting Gemini Vision transcription for {len(doc)} pages...")
+        total_pages = len(doc)
+        print(f"AI Ingestion: Starting Gemini Vision transcription for {total_pages} pages...")
 
         model = genai.GenerativeModel("gemini-2.0-flash")
         
-        for i in range(len(doc)):
-            print(f"AI OCR: Processing page {i+1}/{len(doc)}...")
+        for i in range(total_pages):
+            # Check for cancellation
+            if book_name and job_registry.is_cancelled(book_name):
+                print(f"Ingestion CANCELLED for {book_name}")
+                break
+
+            print(f"AI OCR: Processing page {i+1}/{total_pages}...")
             
             def _prep_page():
                 page = doc.load_page(i)
@@ -118,6 +145,8 @@ class IngestionService:
                 
                 response = await asyncio.to_thread(_gen)
                 res_data = json.loads(response.text)
+                if book_name:
+                    job_registry.update_progress(book_name, i + 1)
                 yield res_data
             except Exception as e:
                 print(f"AI OCR failed for page {i+1}: {e}")
@@ -203,11 +232,19 @@ class IngestionService:
 
     async def process_document(self, file_content: bytes, metadata: Dict[str, Any], background_tasks: Any):
         """Main Orchestrator (Background): Parse -> Chunk -> Embed -> Store Incrementally."""
-        book_name = metadata.get("book_name")
+        book_name = metadata.get("book_name") or f"unnamed_{int(time.time())}"
         ingestion_mode = metadata.get("ingestion_mode", "ai")
 
         async def _run_ingestion():
             try:
+                # Initialize Registry
+                # We need to know total pages beforehand for progress tracking
+                def _get_page_count():
+                    with fitz.open(stream=file_content, filetype="pdf") as doc:
+                        return len(doc)
+                total_pages = await asyncio.to_thread(_get_page_count)
+                job_registry.start_job(book_name, total_pages)
+
                 # 1. Idempotency: Clear existing chunks for this book
                 if book_name:
                     print(f"Clearing existing entries for book: {book_name}")
@@ -219,8 +256,9 @@ class IngestionService:
                 
                 if ingestion_mode == "ai":
                     # AI Mode: Enriched per-page processing
-                    async for page_data in self.parse_pdf_ai(file_content):
-                        # For AI mode, we process each page immediately to preserve enriched metadata
+                    async for page_data in self.parse_pdf_ai(file_content, book_name):
+                        if job_registry.is_cancelled(book_name): break
+
                         print(f"AI Ingestion: Processing enriched page {total_chunks+1} for {book_name}...")
                         # Merge page-level metadata into chunk metadata
                         page_metadata = metadata.copy()
@@ -232,7 +270,9 @@ class IngestionService:
                         total_chunks += chunks_added
                 else:
                     # Standard Mode (Tesseract / Extraction)
-                    async for page_text in self.parse_pdf(file_content):
+                    async for page_text in self.parse_pdf(file_content, book_name):
+                        if job_registry.is_cancelled(book_name): break
+
                         batch_text += page_text + "\n"
                         batch_page_count += 1
                         
@@ -245,16 +285,21 @@ class IngestionService:
                             batch_page_count = 0
                     
                     # Process remaining pages
-                    if batch_text:
+                    if batch_text and not job_registry.is_cancelled(book_name):
                         print(f"Processing final batch for {book_name}...")
                         chunks_added = await self._process_batch(batch_text, metadata)
                         total_chunks += chunks_added
                         print(f"Successfully added {chunks_added} chunks.")
                 
-                print(f"INGESTION COMPLETE for '{book_name}'. Total stored: {total_chunks} chunks.")
+                if job_registry.is_cancelled(book_name):
+                    print(f"INGESTION STOPPED (Cancelled) for '{book_name}'.")
+                else:
+                    job_registry.complete_job(book_name)
+                    print(f"INGESTION COMPLETE for '{book_name}'. Total stored: {total_chunks} chunks.")
             except Exception as e:
                 import traceback
                 traceback.print_exc()
+                job_registry.fail_job(book_name, str(e))
                 print(f"CRITICAL ERROR during ingestion for {book_name}: {str(e)}")
 
         # Start background task using FastAPI's BackgroundTasks

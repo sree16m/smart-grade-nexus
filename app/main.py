@@ -8,6 +8,7 @@ import json
 from app.core.config import settings
 from app.services.ingestion import IngestionService
 from app.services.agents import TopicAgent, GradingAgent
+from app.services.job_registry import job_registry
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -139,6 +140,22 @@ async def ingest_knowledge(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get(f"{settings.API_V1_STR}/knowledge/ingest/status/{{book_name}}")
+async def get_ingest_status(book_name: str):
+    """Checks the status of a background ingestion job."""
+    status = job_registry.get_status(book_name)
+    if not status:
+        raise HTTPException(status_code=404, detail="Job not found for this book name.")
+    return {"status": "success", "data": status}
+
+@app.post(f"{settings.API_V1_STR}/knowledge/ingest/cancel/{{book_name}}")
+async def cancel_ingest(book_name: str):
+    """Cancels an ongoing background ingestion job."""
+    success = job_registry.cancel_job(book_name)
+    if not success:
+        raise HTTPException(status_code=404, detail="Active job not found for this book name.")
+    return {"status": "success", "message": f"Ingestion cancellation requested for '{book_name}'."}
 
 @app.post(f"{settings.API_V1_STR}/intelligence/categorize")
 async def categorize_questions(request_list: List[AnswerSheet]):
